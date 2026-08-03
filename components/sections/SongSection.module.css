@@ -1,0 +1,73 @@
+.section {
+  padding: 96px 0;
+  text-align: center;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  box-sizing: border-box;
+}
+
+.vinylWrap {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin-vinyl {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vinylSpin {
+  width: 100%;
+  height: 100%;
+  animation: spin-vinyl 8s linear infinite;
+}
+
+.vinylImage {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
+  box-shadow: 0 10px 24px rgba(60, 50, 35, 0.12);
+}
+
+.vinylCenterPhoto {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 38%;
+  height: 38%;
+  border-radius: 50%;
+  filter: grayscale(1);
+  object-fit: cover;
+}
+
+.musicPlayer {
+  position: absolute;
+  left: 50%;
+  bottom: -40px;
+  transform: translateX(-50%) scale(0.28);
+  transform-origin: center bottom;
+  width: 220px;
+  height: 300px;
+  border: none;
+  background: transparent;
+}
+
+.heading {
+  font: 400 clamp(22px, 7vw, 36px) / 1 var(--font-display);
+  color: var(--color-ink);
+  margin-bottom: 18px;
+}
+
+.description {
+  font: 400 italic 14.5px/1.8 var(--font-serif);
+  color: var(--color-muted-light);
+  max-width: 380px;
+  margin: 0 auto;
+}

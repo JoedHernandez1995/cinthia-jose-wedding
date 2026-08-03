@@ -1,0 +1,14 @@
+.button {
+  display: inline-block;
+  margin-top: 20px;
+  background: transparent;
+  color: var(--color-taupe-dark);
+  border: 1px solid var(--color-gold);
+  font: 500 9px/1.5 var(--font-label);
+  padding: 12px 24px;
+  border-radius: 2px;
+  letter-spacing: 0.15em;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease;
+}

@@ -1,0 +1,39 @@
+.section {
+  padding: 70px 0;
+  text-align: center;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  box-sizing: border-box;
+}
+
+.dedication {
+  font: 400 italic 14.5px/1.85 var(--font-serif);
+  color: var(--color-ink-soft);
+  max-width: 420px;
+  margin: 0 auto 30px;
+}
+
+.dedicationOutro {
+  font: 400 italic 14.5px/1.85 var(--font-serif);
+  color: var(--color-ink-soft);
+  max-width: 420px;
+  margin: 26px auto 0;
+}
+
+.columns {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 40px;
+}
+
+.columnLabel {
+  font: 500 10px/1.75 var(--font-label);
+  color: var(--color-gold);
+  margin-bottom: 10px;
+  letter-spacing: 0.15em;
+}
+
+.columnNames {
+  font: 400 italic 14px/1.7 var(--font-serif);
+  color: var(--color-ink-soft);
+}

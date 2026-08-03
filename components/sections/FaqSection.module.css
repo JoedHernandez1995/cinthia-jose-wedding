@@ -1,0 +1,55 @@
+.section {
+  padding: 96px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  scroll-margin-top: 70px;
+  box-sizing: border-box;
+}
+
+.heading {
+  text-align: center;
+  font: 400 clamp(18px, 8vw, 38px) / 1.1 var(--font-display);
+  color: var(--color-ink);
+  margin-bottom: 36px;
+}
+
+.contactPrompt {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.contactText {
+  font: 400 italic 14.5px/1.85 var(--font-serif);
+  color: var(--color-ink-soft);
+  margin: 0 0 16px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  padding: 22px 0;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  gap: 14px;
+}
+
+.itemNumber {
+  font: 400 italic 15px/1.4 var(--font-serif);
+  color: var(--color-gold);
+  flex: none;
+}
+
+.itemQuestion {
+  font: 600 10px/1.75 var(--font-label);
+  color: var(--color-ink);
+  margin-bottom: 8px;
+  letter-spacing: 0.15em;
+}
+
+.itemAnswer {
+  font: 400 10px/1.75 var(--font-label);
+  color: var(--color-muted);
+  letter-spacing: 0.15em;
+}

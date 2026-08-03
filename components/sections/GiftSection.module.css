@@ -1,0 +1,65 @@
+.section {
+  padding: 96px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.heading {
+  font: 400 clamp(18px, 7vw, 34px) / 1 var(--font-display);
+  color: var(--color-ink);
+  margin-bottom: 14px;
+}
+
+.intro {
+  font: 400 10px/1.75 var(--font-label);
+  color: var(--color-ink-soft);
+  max-width: 400px;
+  margin: 30px auto 0;
+  letter-spacing: 0.15em;
+}
+
+.accountList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 340px;
+  margin: 28px auto 0;
+  text-align: left;
+}
+
+.accountCard {
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  padding: 16px 18px;
+}
+
+.accountHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.accountLabel {
+  font: 600 10px/1.75 var(--font-label);
+  color: var(--color-taupe);
+  letter-spacing: 0.15em;
+}
+
+.copyButton {
+  all: unset;
+  cursor: pointer;
+  font: 500 9px/1.5 var(--font-label);
+  color: var(--color-taupe);
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--color-taupe);
+  flex: none;
+}
+
+.accountLine {
+  font: 400 10px/1.75 var(--font-label);
+  color: var(--color-ink);
+  letter-spacing: 0.15em;
+}

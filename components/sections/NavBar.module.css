@@ -1,0 +1,28 @@
+.nav {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 800px;
+  box-sizing: border-box;
+  z-index: 30;
+  background: rgba(242, 239, 233, 0.92);
+  backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: calc(18px + env(safe-area-inset-top)) 28px 18px;
+  font: 500 10px/1.75 var(--font-label);
+  color: var(--color-muted);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  letter-spacing: 0.15em;
+  scrollbar-width: none;
+}
+
+.navLink {
+  flex: none;
+}

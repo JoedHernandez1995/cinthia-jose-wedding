@@ -1,0 +1,67 @@
+@font-face {
+  font-family: "Slight";
+  src: url("/fonts/Slight-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --color-gold: #c9a877;
+  --color-ink: #2b2926;
+  --color-ink-soft: #3d3a34;
+  --color-muted: #4a453d;
+  --color-muted-light: #6b6459;
+  --color-taupe: #8a7a63;
+  --color-taupe-light: #8a8477;
+  --color-taupe-dark: #8a6a3a;
+  --color-bg: #f3f1ed;
+  --color-bg-alt: #faf8f4;
+  --color-border: #e6e0d3;
+  --color-placeholder-bg: #ddd7c9;
+
+  --font-display: "Slight", cursive;
+  --font-serif: "Cormorant Garamond", serif;
+  --font-label: "Poppins", sans-serif;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--color-bg);
+  font-family: var(--font-label);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--color-ink);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--color-taupe);
+}
+
+::selection {
+  background: #e3d9c8;
+}

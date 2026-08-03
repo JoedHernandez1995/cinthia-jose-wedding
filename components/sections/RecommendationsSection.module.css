@@ -1,0 +1,26 @@
+.section {
+  padding: 96px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  scroll-margin-top: 70px;
+  box-sizing: border-box;
+}
+
+.heading {
+  text-align: center;
+  font: 400 clamp(18px, 8vw, 38px) / 1 var(--font-display);
+  color: var(--color-ink);
+  margin-bottom: 14px;
+}
+
+.description {
+  text-align: center;
+  font: 400 10px/1.75 var(--font-label);
+  color: var(--color-muted-light);
+  max-width: 380px;
+  margin: 30px auto 30px;
+  letter-spacing: 0.15em;
+}
+
+.buttonWrap {
+  text-align: center;
+}

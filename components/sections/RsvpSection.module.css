@@ -1,0 +1,82 @@
+.section {
+  padding: 96px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  text-align: center;
+  scroll-margin-top: 70px;
+  box-sizing: border-box;
+}
+
+.heading {
+  font: 400 clamp(24px, 8vw, 38px) / 1 var(--font-display);
+  color: var(--color-ink);
+  margin-bottom: 14px;
+}
+
+.deadlineIntro {
+  font: 400 10px/1.75 var(--font-label);
+  color: var(--color-ink-soft);
+  max-width: 360px;
+  margin: 0 auto 8px;
+  letter-spacing: 0.15em;
+}
+
+.deadlineDate {
+  font: 600 italic 20px/1.4 var(--font-serif);
+  color: var(--color-ink);
+  margin: 0 0 34px;
+}
+
+.card {
+  background: var(--color-bg-alt);
+  border: 1.5px solid rgba(43, 41, 38, 0.35);
+  border-radius: 2px;
+  padding: 36px 28px;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.confirmation {
+  font: 400 italic 15px/1.6 var(--font-serif);
+  color: var(--color-ink);
+  margin-bottom: 16px;
+}
+
+.buttonList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.yesButton {
+  display: block;
+  background: var(--color-gold);
+  color: var(--color-ink);
+  font: 500 11px/1.9 var(--font-label);
+  padding: 18px;
+  border-radius: 2px;
+  letter-spacing: 0.18em;
+  border: 1.5px solid var(--color-gold);
+  transition:
+    background 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.noButton {
+  display: block;
+  background: transparent;
+  color: var(--color-ink);
+  border: 1.5px solid var(--color-ink);
+  font: 500 11px/1.9 var(--font-label);
+  padding: 18px;
+  border-radius: 2px;
+  letter-spacing: 0.18em;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease;
+}
+
+.noButtonSelected {
+  background: var(--color-ink);
+  color: var(--color-bg);
+}

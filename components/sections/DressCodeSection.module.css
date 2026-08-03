@@ -1,0 +1,65 @@
+.section {
+  padding: 96px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  scroll-margin-top: 70px;
+  box-sizing: border-box;
+}
+
+.heading {
+  text-align: center;
+  font: 400 clamp(22px, 8vw, 38px) / 1 var(--font-display);
+  color: var(--color-ink);
+  margin-bottom: 22px;
+}
+
+.intro {
+  text-align: center;
+  font: 400 10px/1.75 var(--font-label);
+  color: var(--color-ink-soft);
+  max-width: 420px;
+  margin: 0 auto 30px;
+  letter-spacing: 0.15em;
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  background: var(--color-bg-alt);
+  border: 1px solid rgba(43, 41, 38, 0.15);
+  border-radius: 2px;
+  padding: 32px 28px;
+  text-align: center;
+  box-shadow: 0 10px 26px rgba(60, 50, 35, 0.08);
+}
+
+.cardTitle {
+  font: 600 italic 18px/1.4 var(--font-serif);
+  color: var(--color-ink);
+  margin-bottom: 10px;
+  letter-spacing: 0.05em;
+}
+
+.cardDescription {
+  font: 400 11px/1.8 var(--font-label);
+  color: var(--color-muted);
+  letter-spacing: 0.1em;
+}
+
+.blackBold {
+  color: #000;
+  font-size: 12.5px;
+}
+
+.blackBoldAlt {
+  color: #090909;
+  font-size: 12.5px;
+}
+
+.questionPrompt {
+  text-align: center;
+  margin: 24px 0 0;
+}
