@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import styles from "./RsvpCompanionModal.module.css";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -50,9 +51,18 @@ export function RsvpCompanionModal({
   const namesValid = names.every((n) => n.trim().length > 0);
   const canSubmit = emailValid && namesValid;
 
-  return (
+  return createPortal(
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-labelledby="rsvp-modal-heading">
       <div className={styles.modal}>
+        <button
+          type="button"
+          className={styles.closeButton}
+          onClick={onCancel}
+          disabled={submitting}
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
         <h3 id="rsvp-modal-heading" className={styles.heading}>
           Confirma tu asistencia
         </h3>
@@ -129,6 +139,7 @@ export function RsvpCompanionModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

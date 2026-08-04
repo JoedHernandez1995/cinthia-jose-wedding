@@ -1,4 +1,5 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { brandColors, brandFonts } from "@/lib/brandTheme";
 
 export interface PdfPerson {
   name: string;
@@ -7,6 +8,8 @@ export interface PdfPerson {
 }
 
 export interface InvitationPdfDocumentProps {
+  /** Filesystem path to the monogram image, resolved by the caller (`lib/pdf.tsx`). */
+  monogramSrc: string;
   coupleNames: string;
   dateLabel: string;
   timeLabel: string;
@@ -18,70 +21,114 @@ export interface InvitationPdfDocumentProps {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: 40, fontFamily: "Helvetica", color: "#2b2926" },
-  heading: { fontSize: 20, marginBottom: 4 },
-  subheading: { fontSize: 11, color: "#6b6459", marginBottom: 20 },
-  summaryBox: {
-    borderWidth: 1,
-    borderColor: "#e6e0d3",
-    borderRadius: 4,
-    padding: 16,
-    marginBottom: 24,
+  page: {
+    padding: 36,
+    fontFamily: brandFonts.label,
+    fontWeight: 400,
+    color: brandColors.ink,
   },
-  summaryRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
-  summaryLabel: { fontSize: 9, color: "#8a7a63", textTransform: "uppercase", letterSpacing: 1 },
-  summaryValue: { fontSize: 11 },
-  peopleHeading: { fontSize: 13, marginBottom: 12 },
+  header: { alignItems: "center", marginBottom: 18 },
+  monogram: { width: 76, height: 95, marginBottom: 8 },
+  coupleNames: {
+    fontFamily: brandFonts.display,
+    fontWeight: 400,
+    fontSize: 26,
+    color: brandColors.ink,
+    marginBottom: 8,
+  },
+  goldRule: { width: 48, height: 1.5, backgroundColor: brandColors.gold, marginBottom: 8 },
+  subheading: {
+    fontSize: 9,
+    fontWeight: 500,
+    color: brandColors.taupe,
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+  },
+  summaryBox: {
+    backgroundColor: brandColors.bgAlt,
+    borderWidth: 1,
+    borderColor: brandColors.border,
+    borderRadius: 4,
+    padding: 12,
+    marginBottom: 20,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: brandColors.border,
+  },
+  summaryRowLast: { borderBottomWidth: 0 },
+  summaryLabel: {
+    fontSize: 9,
+    fontWeight: 500,
+    color: brandColors.taupe,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  summaryValue: { fontSize: 11, fontWeight: 500, color: brandColors.ink },
+  peopleHeading: {
+    fontSize: 10,
+    fontWeight: 600,
+    color: brandColors.gold,
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+    marginBottom: 10,
+  },
   person: {
     flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0ece2",
-    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: brandColors.border,
+    borderRadius: 4,
+    padding: 10,
+    marginBottom: 8,
   },
-  personQr: { width: 64, height: 64, marginRight: 16 },
-  personName: { fontSize: 12, marginBottom: 2 },
-  personCode: { fontSize: 8, color: "#8a8477" },
-  footer: { marginTop: 24, fontSize: 9, color: "#8a8477" },
+  personQr: { width: 52, height: 52, marginRight: 14 },
+  personName: { fontSize: 12, fontWeight: 500, color: brandColors.ink, marginBottom: 3 },
+  personCode: { fontSize: 8, fontWeight: 400, color: brandColors.taupeLight, letterSpacing: 0.5 },
+  footer: {
+    marginTop: 14,
+    fontSize: 9,
+    fontWeight: 400,
+    color: brandColors.mutedLight,
+    textAlign: "center",
+  },
 });
 
+const summaryFields: Array<{ label: string; key: "dateLabel" | "timeLabel" | "venueName" | "venueAddress" | "dressCode" }> = [
+  { label: "Fecha", key: "dateLabel" },
+  { label: "Hora", key: "timeLabel" },
+  { label: "Lugar", key: "venueName" },
+  { label: "Dirección", key: "venueAddress" },
+  { label: "Vestimenta", key: "dressCode" },
+];
+
 /** Pure presentational PDF: event summary + one QR-coded entry per person (guest + each named companion). */
-export function InvitationPdfDocument({
-  coupleNames,
-  dateLabel,
-  timeLabel,
-  venueName,
-  venueAddress,
-  dressCode,
-  people,
-}: InvitationPdfDocumentProps) {
+export function InvitationPdfDocument(props: InvitationPdfDocumentProps) {
+  const { monogramSrc, coupleNames, people } = props;
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <Text style={styles.heading}>{coupleNames}</Text>
-        <Text style={styles.subheading}>Comprobante de confirmación de asistencia</Text>
+        <View style={styles.header}>
+          <Image src={monogramSrc} style={styles.monogram} />
+          <Text style={styles.coupleNames}>{coupleNames}</Text>
+          <View style={styles.goldRule} />
+          <Text style={styles.subheading}>Comprobante de confirmación de asistencia</Text>
+        </View>
 
         <View style={styles.summaryBox}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Fecha</Text>
-            <Text style={styles.summaryValue}>{dateLabel}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Hora</Text>
-            <Text style={styles.summaryValue}>{timeLabel}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Lugar</Text>
-            <Text style={styles.summaryValue}>{venueName}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Dirección</Text>
-            <Text style={styles.summaryValue}>{venueAddress}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Vestimenta</Text>
-            <Text style={styles.summaryValue}>{dressCode}</Text>
-          </View>
+          {summaryFields.map((field, index) => (
+            <View
+              key={field.key}
+              style={index === summaryFields.length - 1 ? { ...styles.summaryRow, ...styles.summaryRowLast } : styles.summaryRow}
+            >
+              <Text style={styles.summaryLabel}>{field.label}</Text>
+              <Text style={styles.summaryValue}>{props[field.key]}</Text>
+            </View>
+          ))}
         </View>
 
         <Text style={styles.peopleHeading}>Asistentes confirmados ({people.length})</Text>

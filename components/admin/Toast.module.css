@@ -1,0 +1,23 @@
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 100;
+  max-width: min(420px, calc(100vw - 32px));
+  font: 500 13px/1.5 var(--font-label);
+  border-radius: 6px;
+  padding: 12px 18px;
+  box-shadow: 0 10px 26px rgba(60, 50, 35, 0.18);
+}
+
+.toastSuccess {
+  background: var(--color-gold);
+  color: #fff;
+}
+
+.toastError {
+  background: #fbeceb;
+  color: #b3423f;
+  border: 1px solid #f0c9c7;
+}

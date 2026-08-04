@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/admin/SubmitButton";
 import { login } from "./actions";
 import styles from "./page.module.css";
 
@@ -24,9 +25,7 @@ export default function AdminLoginPage({
           <input type="password" name="password" required autoComplete="current-password" className={styles.input} />
         </label>
 
-        <button type="submit" className={styles.button}>
-          Iniciar sesión
-        </button>
+        <SubmitButton label="Iniciar sesión" pendingLabel="Iniciando sesión…" className={styles.button} />
       </form>
     </main>
   );

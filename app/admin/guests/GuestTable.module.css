@@ -148,6 +148,13 @@
   background: #fbeceb;
 }
 
+.actionLink:disabled,
+.actionButton:disabled,
+.actionButtonDanger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .empty {
   text-align: center;
   color: var(--color-muted-light);

@@ -1,11 +1,11 @@
 "use server";
 
 import Papa from "papaparse";
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
   DuplicateGuestError,
   GuestValidationError,
+  RsvpValidationError,
   createGuest,
   deleteGuest,
   markInviteSent,
@@ -22,18 +22,15 @@ function parseInvitedBy(raw: FormDataEntryValue | null): InvitedBy | null {
   return value === "novio" || value === "novia" ? value : null;
 }
 
-const MAX_ENCODED_ERRORS = 20;
-
-function redirectWithResult(result: CsvUploadResult) {
-  const trimmed: CsvUploadResult = { ...result, skipped: result.skipped.slice(0, MAX_ENCODED_ERRORS) };
-  redirect(`/admin/guests?uploadResult=${encodeURIComponent(JSON.stringify(trimmed))}`);
+export interface ActionResult {
+  ok: boolean;
+  message: string;
 }
 
-export async function uploadGuestsCsv(formData: FormData) {
+export async function uploadGuestsCsv(_prevState: CsvUploadResult | null, formData: FormData): Promise<CsvUploadResult> {
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    redirectWithResult({ inserted: 0, updated: 0, skipped: [{ row: 0, reason: "No se seleccionó ningún archivo." }] });
-    return;
+    return { inserted: 0, updated: 0, skipped: [{ row: 0, reason: "No se seleccionó ningún archivo." }] };
   }
 
   const text = await file.text();
@@ -43,39 +40,40 @@ export async function uploadGuestsCsv(formData: FormData) {
   const { inserted, updated } = await upsertGuestsFromCsv(rows);
 
   revalidatePath("/admin/guests");
-  redirectWithResult({ inserted, updated, skipped: errors });
+  return { inserted, updated, skipped: errors };
 }
 
-export async function addSingleGuest(formData: FormData) {
+export async function addSingleGuest(_prevState: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const name = String(formData.get("name") ?? "").trim();
   const displayName = String(formData.get("displayName") ?? "").trim() || null;
   const whatsappNumber = String(formData.get("whatsappNumber") ?? "").replace(/\D/g, "");
   const partySizeAllowed = Number(formData.get("partySizeAllowed") ?? 1);
   const invitedBy = parseInvitedBy(formData.get("invitedBy"));
 
-  if (name && whatsappNumber) {
-    try {
-      await createGuest({
-        name,
-        displayName,
-        whatsappNumber,
-        invitedBy,
-        partySizeAllowed: Number.isFinite(partySizeAllowed) && partySizeAllowed >= 1 ? partySizeAllowed : 1,
-      });
-    } catch (error) {
-      if (error instanceof DuplicateGuestError) {
-        revalidatePath("/admin/guests");
-        redirect(`/admin/guests?addError=${encodeURIComponent(error.message)}`);
-      }
-      throw error;
+  if (!name || !whatsappNumber) {
+    return { ok: false, message: "El nombre y el número de WhatsApp son obligatorios." };
+  }
+
+  try {
+    await createGuest({
+      name,
+      displayName,
+      whatsappNumber,
+      invitedBy,
+      partySizeAllowed: Number.isFinite(partySizeAllowed) && partySizeAllowed >= 1 ? partySizeAllowed : 1,
+    });
+  } catch (error) {
+    if (error instanceof DuplicateGuestError) {
+      return { ok: false, message: error.message };
     }
+    throw error;
   }
 
   revalidatePath("/admin/guests");
-  redirect("/admin/guests");
+  return { ok: true, message: `${name} fue agregado.` };
 }
 
-export async function editGuestAction(formData: FormData) {
+export async function editGuestAction(_prevState: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const displayName = String(formData.get("displayName") ?? "").trim() || null;
@@ -83,47 +81,49 @@ export async function editGuestAction(formData: FormData) {
   const partySizeAllowed = Number(formData.get("partySizeAllowed") ?? 1);
   const invitedBy = parseInvitedBy(formData.get("invitedBy"));
 
-  if (id && name && whatsappNumber) {
-    try {
-      await updateGuest(id, {
-        name,
-        displayName,
-        whatsappNumber,
-        invitedBy,
-        partySizeAllowed: Number.isFinite(partySizeAllowed) && partySizeAllowed >= 1 ? partySizeAllowed : 1,
-      });
-    } catch (error) {
-      if (error instanceof DuplicateGuestError || error instanceof GuestValidationError) {
-        redirect(`/admin/guests/${id}?editError=${encodeURIComponent(error.message)}`);
-      }
-      throw error;
+  if (!id || !name || !whatsappNumber) {
+    return { ok: false, message: "El nombre y el número de WhatsApp son obligatorios." };
+  }
+
+  try {
+    await updateGuest(id, {
+      name,
+      displayName,
+      whatsappNumber,
+      invitedBy,
+      partySizeAllowed: Number.isFinite(partySizeAllowed) && partySizeAllowed >= 1 ? partySizeAllowed : 1,
+    });
+  } catch (error) {
+    if (error instanceof DuplicateGuestError || error instanceof GuestValidationError) {
+      return { ok: false, message: error.message };
     }
+    throw error;
   }
 
   revalidatePath("/admin/guests");
   revalidatePath(`/admin/guests/${id}`);
-  redirect(`/admin/guests/${id}`);
+  return { ok: true, message: "Cambios guardados." };
 }
 
-export async function deleteGuestAction(formData: FormData) {
+export async function deleteGuestAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (id) await deleteGuest(id);
   revalidatePath("/admin/guests");
 }
 
-export async function markInviteSentAction(formData: FormData) {
+export async function markInviteSentAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (id) await markInviteSent(id);
   revalidatePath("/admin/guests");
 }
 
-export async function regenerateTokenAction(formData: FormData) {
+export async function regenerateTokenAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (id) await regenerateToken(id);
   revalidatePath("/admin/guests");
 }
 
-export async function overrideRsvpAction(formData: FormData) {
+export async function overrideRsvpAction(_prevState: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "") as RsvpStatus;
   const email = String(formData.get("email") ?? "").trim();
@@ -133,10 +133,20 @@ export async function overrideRsvpAction(formData: FormData) {
     .map((n) => n.trim())
     .filter(Boolean);
 
-  if (id && (status === "yes" || status === "no")) {
+  if (!id || (status !== "yes" && status !== "no")) {
+    return { ok: false, message: "Selecciona un estado válido." };
+  }
+
+  try {
     await overrideRsvp(id, { status, email: email || undefined, companionNames });
+  } catch (error) {
+    if (error instanceof RsvpValidationError) {
+      return { ok: false, message: error.message };
+    }
+    throw error;
   }
 
   revalidatePath("/admin/guests");
   revalidatePath(`/admin/guests/${id}`);
+  return { ok: true, message: "Respuesta actualizada." };
 }

@@ -3,8 +3,12 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Guest } from "@/types/guest";
+import { useAdminToast } from "@/components/admin/Toast";
+import { useAdminConfirm } from "@/components/admin/ConfirmDialog";
 import { deleteGuestAction, markInviteSentAction, regenerateTokenAction } from "./actions";
 import styles from "./GuestTable.module.css";
+
+type PendingAction = "whatsapp" | "regenerate" | "delete";
 
 export interface GuestRowView extends Guest {
   inviteLink: string;
@@ -20,39 +24,64 @@ function formatDate(iso: string | null): string {
 
 export function GuestTable({ guests }: { guests: GuestRowView[] }) {
   const router = useRouter();
+  const { showToast } = useAdminToast();
+  const confirm = useAdminConfirm();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sideFilter, setSideFilter] = useState<SideFilter>("all");
+  const [pending, setPending] = useState<{ id: string; action: PendingAction } | null>(null);
 
   async function handleSendWhatsApp(guest: GuestRowView) {
     // Open synchronously (before any await) so popup blockers don't swallow it.
     window.open(guest.inviteLink, "_blank", "noopener");
-    const formData = new FormData();
-    formData.set("id", guest.id);
-    await markInviteSentAction(formData);
-    router.refresh();
+    setPending({ id: guest.id, action: "whatsapp" });
+    try {
+      const formData = new FormData();
+      formData.set("id", guest.id);
+      await markInviteSentAction(formData);
+      router.refresh();
+      showToast(`Invitación marcada como enviada a ${guest.name}.`);
+    } catch {
+      showToast("No se pudo marcar la invitación como enviada.", "error");
+    } finally {
+      setPending(null);
+    }
   }
 
   async function handleRegenerateLink(guest: GuestRowView) {
-    const confirmed = window.confirm(
-      `¿Regenerar el link de ${guest.name}? Su enlace actual dejará de funcionar de inmediato.`,
-    );
+    const confirmed = await confirm(`¿Regenerar el link de ${guest.name}? Su enlace actual dejará de funcionar de inmediato.`);
     if (!confirmed) return;
-    const formData = new FormData();
-    formData.set("id", guest.id);
-    await regenerateTokenAction(formData);
-    router.refresh();
+    setPending({ id: guest.id, action: "regenerate" });
+    try {
+      const formData = new FormData();
+      formData.set("id", guest.id);
+      await regenerateTokenAction(formData);
+      router.refresh();
+      showToast(`Link de ${guest.name} regenerado.`);
+    } catch {
+      showToast("No se pudo regenerar el link.", "error");
+    } finally {
+      setPending(null);
+    }
   }
 
   async function handleDelete(guest: GuestRowView) {
-    const confirmed = window.confirm(
+    const confirmed = await confirm(
       `¿Eliminar a ${guest.name}? Esto borra permanentemente su RSVP e historial de vistas. Esta acción no se puede deshacer.`,
     );
     if (!confirmed) return;
-    const formData = new FormData();
-    formData.set("id", guest.id);
-    await deleteGuestAction(formData);
-    router.refresh();
+    setPending({ id: guest.id, action: "delete" });
+    try {
+      const formData = new FormData();
+      formData.set("id", guest.id);
+      await deleteGuestAction(formData);
+      router.refresh();
+      showToast(`${guest.name} fue eliminado.`);
+    } catch {
+      showToast("No se pudo eliminar al invitado.", "error");
+    } finally {
+      setPending(null);
+    }
   }
 
   const filtered = useMemo(() => {
@@ -166,14 +195,29 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                   <a href={`/admin/guests/${guest.id}`} className={styles.actionButton}>
                     Editar
                   </a>
-                  <button type="button" className={styles.actionLink} onClick={() => handleSendWhatsApp(guest)}>
-                    Enviar WhatsApp
+                  <button
+                    type="button"
+                    className={styles.actionLink}
+                    disabled={pending?.id === guest.id}
+                    onClick={() => handleSendWhatsApp(guest)}
+                  >
+                    {pending?.id === guest.id && pending.action === "whatsapp" ? "Enviando…" : "Enviar WhatsApp"}
                   </button>
-                  <button type="button" className={styles.actionButton} onClick={() => handleRegenerateLink(guest)}>
-                    Regenerar link
+                  <button
+                    type="button"
+                    className={styles.actionButton}
+                    disabled={pending?.id === guest.id}
+                    onClick={() => handleRegenerateLink(guest)}
+                  >
+                    {pending?.id === guest.id && pending.action === "regenerate" ? "Regenerando…" : "Regenerar link"}
                   </button>
-                  <button type="button" className={styles.actionButtonDanger} onClick={() => handleDelete(guest)}>
-                    Eliminar
+                  <button
+                    type="button"
+                    className={styles.actionButtonDanger}
+                    disabled={pending?.id === guest.id}
+                    onClick={() => handleDelete(guest)}
+                  >
+                    {pending?.id === guest.id && pending.action === "delete" ? "Eliminando…" : "Eliminar"}
                   </button>
                 </td>
               </tr>

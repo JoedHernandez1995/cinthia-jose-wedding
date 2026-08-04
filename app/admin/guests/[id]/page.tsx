@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { buildGuestInviteLink, getGuestById, listGuestViews } from "@/lib/guests";
-import { editGuestAction, overrideRsvpAction } from "@/app/admin/guests/actions";
+import { EditGuestForm } from "./EditGuestForm";
+import { OverrideRsvpForm } from "./OverrideRsvpForm";
 import styles from "./page.module.css";
 
 function formatDate(iso: string | null): string {
@@ -10,13 +11,7 @@ function formatDate(iso: string | null): string {
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminGuestDetailPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
-  searchParams: { editError?: string };
-}) {
+export default async function AdminGuestDetailPage({ params }: { params: { id: string } }) {
   const guest = await getGuestById(params.id);
   if (!guest) notFound();
 
@@ -30,54 +25,11 @@ export default async function AdminGuestDetailPage({
       </a>
       <h1 className={styles.heading}>{guest.name}</h1>
 
-      {searchParams.editError && <div className={styles.errorBanner}>{searchParams.editError}</div>}
-
       <div className={styles.grid}>
         <section className={styles.panel}>
           <h2 className={styles.panelHeading}>Editar información del invitado</h2>
           <p className={styles.muted}>Corrige el nombre, número o total de personas permitidas para {guest.name}.</p>
-          <form action={editGuestAction} className={styles.overrideForm}>
-            <input type="hidden" name="id" value={guest.id} />
-            <label className={styles.label}>
-              Nombre
-              <input type="text" name="name" defaultValue={guest.name} required className={styles.input} />
-            </label>
-            <label className={styles.label}>
-              Nombre para mostrar (ej. &quot;Familia Martínez&quot;) — vacío usa el nombre de arriba
-              <input type="text" name="displayName" defaultValue={guest.displayName ?? ""} className={styles.input} />
-            </label>
-            <label className={styles.label}>
-              WhatsApp
-              <input
-                type="text"
-                name="whatsappNumber"
-                defaultValue={guest.whatsappNumber}
-                required
-                className={styles.input}
-              />
-            </label>
-            <label className={styles.label}>
-              Total de personas permitidas (incluyendo al invitado)
-              <input
-                type="number"
-                name="partySizeAllowed"
-                defaultValue={guest.partySizeAllowed}
-                min={1}
-                className={styles.input}
-              />
-            </label>
-            <label className={styles.label}>
-              Lado
-              <select name="invitedBy" defaultValue={guest.invitedBy ?? ""} className={styles.select}>
-                <option value="">Sin definir</option>
-                <option value="novio">Invitado del novio</option>
-                <option value="novia">Invitado de la novia</option>
-              </select>
-            </label>
-            <button type="submit" className={styles.submitButton}>
-              Guardar cambios
-            </button>
-          </form>
+          <EditGuestForm guest={guest} />
         </section>
 
         <section className={styles.panel}>
@@ -148,33 +100,7 @@ export default async function AdminGuestDetailPage({
         <section className={styles.panel}>
           <h2 className={styles.panelHeading}>Corrección manual</h2>
           <p className={styles.muted}>Ajusta la respuesta si el invitado te avisó por otro medio.</p>
-          <form action={overrideRsvpAction} className={styles.overrideForm}>
-            <input type="hidden" name="id" value={guest.id} />
-            <label className={styles.label}>
-              Estado
-              <select name="status" defaultValue={guest.rsvpStatus === "pending" ? "yes" : guest.rsvpStatus} className={styles.select}>
-                <option value="yes">Confirmado</option>
-                <option value="no">No asistirá</option>
-              </select>
-            </label>
-            <label className={styles.label}>
-              Correo (para reenviar el comprobante)
-              <input type="email" name="email" defaultValue={guest.email ?? ""} className={styles.input} placeholder="correo@ejemplo.com" />
-            </label>
-            <label className={styles.label}>
-              Acompañantes (nombres separados por coma, máx {guest.partySizeAllowed - 1})
-              <input
-                type="text"
-                name="companionNames"
-                defaultValue={guest.companionNames.join(", ")}
-                className={styles.input}
-                placeholder="Ana, Luis"
-              />
-            </label>
-            <button type="submit" className={styles.submitButton}>
-              Guardar
-            </button>
-          </form>
+          <OverrideRsvpForm guest={guest} />
         </section>
       </div>
     </div>
