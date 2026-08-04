@@ -19,6 +19,12 @@
   pointer-events: none;
 }
 
+.guestName {
+  font: 400 italic 18px/1.4 var(--font-serif);
+  color: var(--color-ink);
+  margin-bottom: 14px;
+}
+
 .eyebrow {
   font: 600 10px/1.75 var(--font-label);
   color: var(--color-muted-light);
@@ -34,9 +40,20 @@
 }
 
 .names {
-  font: 400 clamp(38px, 10vw, 56px) / 1 var(--font-display);
-  color: var(--color-ink);
+  composes: sectionHeading from global;
+  /* Sized to always fit "Cinthia & José" on one line: .overlay has 64px of
+     horizontal padding (32px each side), and this font renders the couple's
+     names at ~9.84x font-size in width — measured directly. */
+  font-size: clamp(24px, calc((100vw - 64px) / 9.84), 56px);
+  white-space: nowrap;
   margin-bottom: 36px;
+}
+
+.validity {
+  font: 500 10px/1.75 var(--font-label);
+  color: var(--color-taupe);
+  letter-spacing: 0.18em;
+  margin: 10px 0 36px;
 }
 
 .envelopeButton {
@@ -61,6 +78,6 @@
   position: absolute;
   bottom: -34px;
   font: 500 10px/1.75 var(--font-label);
-  color: var(--color-muted-light);
+  color: var(--color-taupe);
   letter-spacing: 0.15em;
 }

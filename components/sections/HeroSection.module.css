@@ -13,8 +13,14 @@
 }
 
 .names {
-  font: 400 clamp(32px, 11vw, 68px) / 1.05 var(--font-display);
-  color: var(--color-ink);
+  composes: sectionHeading from global;
+  /* Sized to always fit "Cinthia & José" on one line: the container has
+     56px of horizontal padding (28px each side), and this font renders the
+     couple's names at ~9.85x font-size in width — measured directly, not
+     guessed — so this stays a single line at every viewport width instead
+     of wrapping once the vw-based size gets too large for narrow phones. */
+  font-size: clamp(24px, calc((100vw - 56px) / 9.85), 68px);
+  white-space: nowrap;
   margin: 8px 0 18px;
 }
 

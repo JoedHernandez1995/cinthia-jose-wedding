@@ -14,18 +14,25 @@ import { DressCodeSection } from "@/components/sections/DressCodeSection";
 import { FaqSection } from "@/components/sections/FaqSection";
 import { GiftSection } from "@/components/sections/GiftSection";
 import { RecommendationsSection } from "@/components/sections/RecommendationsSection";
+import { ClosingImageSection } from "@/components/sections/ClosingImageSection";
 import { SiteFooter } from "@/components/sections/SiteFooter";
+import type { GuestViewModel } from "@/types/guest";
 import styles from "./InvitationPage.module.css";
+
+interface InvitationPageProps {
+  /** Only set when rendered from a guest's personal `/i/[token]` page. Root `/` renders with no guest. */
+  guest?: GuestViewModel;
+}
 
 /**
  * Composition root for the single-page wedding invitation. Each section owns
  * its own copy, styling, and local state — this component only decides
  * ordering and the shared page chrome (envelope overlay + fixed nav).
  */
-export function InvitationPage() {
+export function InvitationPage({ guest }: InvitationPageProps) {
   return (
     <div className={styles.page}>
-      <EnvelopeIntro />
+      <EnvelopeIntro guest={guest} />
 
       <div className={styles.container}>
         <NavBar />
@@ -35,12 +42,13 @@ export function InvitationPage() {
         <SongSection />
         <PhotoMarquee />
         <VenueDetailsSection />
-        <RsvpSection />
+        <RsvpSection guest={guest} />
         <LocationSection />
         <DressCodeSection />
         <FaqSection />
         <GiftSection />
         <RecommendationsSection />
+        <ClosingImageSection />
         <SiteFooter />
       </div>
     </div>

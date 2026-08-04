@@ -1,0 +1,117 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(43, 41, 38, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.modal {
+  width: 100%;
+  max-width: 380px;
+  background: var(--color-bg-alt);
+  border-radius: 6px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.heading {
+  font: 400 19px/1.35 var(--font-display);
+  color: var(--color-ink);
+  margin: 0;
+  text-align: center;
+}
+
+.fieldLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font: 500 12px/1.4 var(--font-label);
+  color: var(--color-muted);
+}
+
+.fieldHint {
+  font: 400 12px/1.5 var(--font-label);
+  color: var(--color-muted-light);
+  margin: -8px 0 0;
+}
+
+.countSelect {
+  font: 400 14px/1.4 var(--font-label);
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--color-ink);
+}
+
+.nameList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nameInput {
+  font: 400 14px/1.4 var(--font-label);
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--color-ink);
+}
+
+.error {
+  font: 400 13px/1.5 var(--font-label);
+  color: #b3423f;
+  background: #fbeceb;
+  border: 1px solid #f0c9c7;
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.cancelButton {
+  flex: 1;
+  font: 500 12px/1 var(--font-label);
+  letter-spacing: 0.03em;
+  color: var(--color-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 12px;
+  cursor: pointer;
+}
+.cancelButton:hover {
+  color: var(--color-ink);
+}
+
+.confirmButton {
+  flex: 1;
+  font: 500 12px/1 var(--font-label);
+  letter-spacing: 0.03em;
+  color: var(--color-ink);
+  background: var(--color-gold);
+  border: none;
+  border-radius: 4px;
+  padding: 12px;
+  cursor: pointer;
+}
+.confirmButton:hover {
+  opacity: 0.9;
+}
+.confirmButton:disabled,
+.cancelButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

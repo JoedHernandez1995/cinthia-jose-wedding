@@ -4,9 +4,9 @@ import { brideParents, groomParents } from "@/config/family";
 import styles from "./ParentsBlessingSection.module.css";
 
 const blessingIntro =
-  "Con la bendición de quienes nos dieron la vida y nos enseñaron a amar, damos este paso hacia la eternidad.";
+  "Con la bendición de quienes nos dieron la vida y nos enseñaron el valor del amor, celebramos el comienzo de una nueva etapa.";
 const blessingOutro =
-  "Acompañados por el amor de nuestras familias y llenos de gratitud por el camino que nos ha traído hasta aquí, tenemos el honor de invitarlos a compartir y ser testigos del inicio de nuestra vida juntos.";
+  "Acompañados por el amor de nuestras familias y llenos de gratitud por el camino que nos ha traído hasta aquí, tenemos el honor de invitarlos a compartir y ser testigos del momento en que uniremos nuestras vidas en matrimonio.";
 
 function ParentsColumn({ label, names }: { label: string; names: string[] }) {
   return (

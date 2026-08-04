@@ -7,8 +7,8 @@
 }
 
 .heading {
-  font: 400 clamp(24px, 8vw, 38px) / 1 var(--font-display);
-  color: var(--color-ink);
+  composes: sectionHeading from global;
+  font-size: clamp(24px, 8vw, 38px);
   margin-bottom: 14px;
 }
 
@@ -49,6 +49,7 @@
 
 .yesButton {
   display: block;
+  width: 100%;
   background: var(--color-gold);
   color: var(--color-ink);
   font: 500 11px/1.9 var(--font-label);
@@ -56,14 +57,20 @@
   border-radius: 2px;
   letter-spacing: 0.18em;
   border: 1.5px solid var(--color-gold);
+  cursor: pointer;
   transition:
     background 0.3s ease,
     color 0.3s ease,
     border-color 0.3s ease;
 }
+.yesButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
 
 .noButton {
   display: block;
+  width: 100%;
   background: transparent;
   color: var(--color-ink);
   border: 1.5px solid var(--color-ink);
@@ -71,12 +78,43 @@
   padding: 18px;
   border-radius: 2px;
   letter-spacing: 0.18em;
+  cursor: pointer;
   transition:
     background 0.3s ease,
     color 0.3s ease;
+}
+.noButton:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .noButtonSelected {
   background: var(--color-ink);
   color: var(--color-bg);
+}
+
+.editButton {
+  background: transparent;
+  border: none;
+  color: var(--color-taupe);
+  font: 500 11px/1.9 var(--font-label);
+  letter-spacing: 0.1em;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.error {
+  font: 400 13px/1.5 var(--font-label);
+  color: #b3423f;
+  background: #fbeceb;
+  border: 1px solid #f0c9c7;
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin: 0 0 16px;
+}
+
+.confirmationNote {
+  font: 400 12px/1.6 var(--font-label);
+  color: var(--color-muted-light);
+  margin: -8px 0 16px;
 }

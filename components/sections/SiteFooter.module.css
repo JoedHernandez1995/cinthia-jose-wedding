@@ -15,8 +15,8 @@
 }
 
 .names {
-  font: 400 clamp(20px, 6.5vw, 32px) / 1 var(--font-display);
-  color: var(--color-ink);
+  composes: sectionHeading from global;
+  font-size: clamp(20px, 6.5vw, 32px);
   margin-bottom: 10px;
 }
 

@@ -1,0 +1,42 @@
+.heading {
+  font: 600 22px/1.2 var(--font-label);
+  color: var(--color-ink);
+  margin: 0 0 20px;
+}
+
+.subheading {
+  font: 600 15px/1.2 var(--font-label);
+  color: var(--color-ink);
+  margin: 0 0 14px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.card {
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 18px;
+}
+
+.cardValue {
+  font: 600 26px/1.1 var(--font-label);
+  color: var(--color-ink);
+}
+
+.cardLabel {
+  font: 500 11px/1.5 var(--font-label);
+  color: var(--color-muted-light);
+  letter-spacing: 0.04em;
+  margin-top: 6px;
+}
+
+.link {
+  font: 500 13px/1 var(--font-label);
+  color: var(--color-taupe);
+}

@@ -6,8 +6,8 @@
 }
 
 .heading {
-  font: 400 clamp(18px, 7vw, 34px) / 1 var(--font-display);
-  color: var(--color-ink);
+  composes: sectionHeading from global;
+  font-size: clamp(18px, 7vw, 34px);
   margin-bottom: 14px;
 }
 

@@ -1,0 +1,120 @@
+.back {
+  font: 500 12px/1 var(--font-label);
+  color: var(--color-muted);
+  display: inline-block;
+  margin-bottom: 16px;
+}
+.back:hover {
+  color: var(--color-ink);
+}
+
+.heading {
+  font: 600 22px/1.2 var(--font-label);
+  color: var(--color-ink);
+  margin: 0 0 20px;
+}
+
+.errorBanner {
+  font: 400 13px/1.5 var(--font-label);
+  color: #b3423f;
+  background: #fbeceb;
+  border: 1px solid #f0c9c7;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.panel {
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 20px;
+}
+
+.panelHeading {
+  font: 500 14px/1.2 var(--font-label);
+  color: var(--color-ink);
+  margin: 0 0 14px;
+}
+
+.dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  font: 400 13px/1.5 var(--font-label);
+  margin: 0;
+}
+.dl dt {
+  color: var(--color-muted-light);
+}
+.dl dd {
+  margin: 0;
+  color: var(--color-ink);
+  word-break: break-word;
+}
+
+.mono {
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.muted {
+  font: 400 13px/1.5 var(--font-label);
+  color: var(--color-muted-light);
+  margin: 0;
+}
+
+.viewList {
+  margin: 0;
+  padding-left: 18px;
+  font: 400 13px/1.7 var(--font-label);
+  color: var(--color-ink);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.overrideForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font: 500 11px/1.4 var(--font-label);
+  color: var(--color-muted);
+  letter-spacing: 0.03em;
+}
+
+.select,
+.input {
+  font: 400 13px/1.4 var(--font-label);
+  padding: 9px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.submitButton {
+  align-self: flex-start;
+  font: 500 12px/1 var(--font-label);
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: var(--color-gold);
+  border: none;
+  border-radius: 4px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+.submitButton:hover {
+  opacity: 0.9;
+}

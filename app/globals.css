@@ -65,3 +65,17 @@ a:hover {
 ::selection {
   background: #e3d9c8;
 }
+
+/*
+ * Shared base for every section's script-font heading (composed into each
+ * section's own `.heading` class via CSS Modules `composes: sectionHeading
+ * from global`). Only font-family/weight/line-height/color are shared here —
+ * font-size (via clamp()) and margin genuinely differ per section (Hero's
+ * title is a different visual tier than a FAQ heading) and stay local.
+ */
+.sectionHeading {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--color-ink);
+}

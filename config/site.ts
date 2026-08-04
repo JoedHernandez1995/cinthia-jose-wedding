@@ -23,9 +23,12 @@ export const wedding = {
   dateLabel: "SÁBADO, 7 NOVIEMBRE DE 2026",
   timeLabel: "A PARTIR DE LAS 4:00 P.M.",
   rsvpDeadlineLabel: "1 de octubre, 2026",
+  // Same instant as `rsvpDeadlineLabel` above, used to flag (not block) late RSVPs.
+  rsvpDeadlineIso: "2026-10-01T23:59:59-06:00",
   venueName: "Hacienda El Trapiche",
   venueCity: "Tegucigalpa, Honduras",
   venueAddress: "Boulevard Suyapa, Tegucigalpa",
+  dressCode: "Formal · Vestir de color negro",
 };
 
 export const calendarEvent = {
@@ -40,6 +43,10 @@ export const calendarEvent = {
 
 // Contact placeholder — replace with the real WhatsApp number before shipping.
 export const WHATSAPP_NUMBER = "50499999999";
+
+// Wedding planner's WhatsApp number — receives a courtesy notification after
+// each guest RSVP. Placeholder, replace before shipping.
+export const plannerWhatsAppNumber = "50488888888";
 
 export const whatsappMessages = {
   rsvpYes: "¡Hola! Confirmo que asistiré a la boda de José & Cinthia el 7 de noviembre. ¡Nos vemos ahí! 🎉",
@@ -73,8 +80,7 @@ export const sectionIds = {
 } as const;
 
 // Marquee photo ids — Photo falls back to a placeholder if the file is
-// missing from /public/photos. marquee-1, marquee-4-b and marquee-5-b have
-// no source image yet.
+// missing from /public/photos.
 export const marqueePhotoIds = [
   "marquee-1", "marquee-2", "marquee-3", "marquee-4", "marquee-5",
   "marquee-1-b", "marquee-2-b", "marquee-3-b", "marquee-4-b", "marquee-5-b",

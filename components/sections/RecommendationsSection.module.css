@@ -6,9 +6,9 @@
 }
 
 .heading {
+  composes: sectionHeading from global;
   text-align: center;
-  font: 400 clamp(18px, 8vw, 38px) / 1 var(--font-display);
-  color: var(--color-ink);
+  font-size: clamp(18px, 8vw, 38px);
   margin-bottom: 14px;
 }
 

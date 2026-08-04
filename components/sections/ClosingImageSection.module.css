@@ -1,0 +1,32 @@
+.section {
+  /* Breaks out of the page's centered 800px column — the one deliberate
+     full-bleed moment on the site, reserved for this closing image. */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.image {
+  display: block;
+  width: 100%;
+  /* Source is portrait-shaped (tall phone photo): skyline/bridge sit in the
+     top third, the couple around two-thirds down, foreground pebbles fill
+     the rest. object-position is biased toward the top so the skyline —
+     the whole point of this photo — is never the part that gets cropped;
+     the foreground pebbles are the sacrificial edge instead. */
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  object-position: center 10%;
+  filter: grayscale(1);
+}
+
+@media (min-width: 640px) {
+  .image {
+    /* A true 16:9 would only keep ~40% of this portrait source's height —
+       nowhere near enough to fit both the skyline and the couple. 1:1 keeps
+       ~75%, enough for both, while still reading as a wide banner at full
+       page width. */
+    aspect-ratio: 1 / 1;
+    object-position: center 10%;
+  }
+}
