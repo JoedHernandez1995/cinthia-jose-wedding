@@ -9,6 +9,8 @@ import type {
   Guest,
   GuestCompanion,
   GuestCsvRow,
+  GuestLocation,
+  GuestViewModel,
   InvitedBy,
   RsvpStatus,
   SubmitRsvpInput,
@@ -26,6 +28,7 @@ interface GuestRow {
   email: string | null;
   checkin_code: string;
   invited_by: InvitedBy | null;
+  guest_location: GuestLocation | null;
   party_size_allowed: number;
   invite_sent: boolean;
   invite_sent_at: string | null;
@@ -63,6 +66,7 @@ function mapRow(row: GuestRow, companions: GuestCompanion[]): Guest {
     email: row.email,
     checkinCode: row.checkin_code,
     invitedBy: row.invited_by,
+    guestLocation: row.guest_location,
     partySizeAllowed: row.party_size_allowed,
     inviteSent: row.invite_sent,
     inviteSentAt: row.invite_sent_at,
@@ -113,6 +117,21 @@ async function fetchCompanionsForGuestIds(guestIds: string[]): Promise<Map<strin
   return byGuestId;
 }
 
+/** Trims a full `Guest` row down to what a guest's own personal pages need. */
+export function toGuestViewModel(guest: Guest): GuestViewModel {
+  return {
+    token: guest.token,
+    name: guest.name,
+    displayName: guest.displayName || guest.name,
+    email: guest.email,
+    guestLocation: guest.guestLocation,
+    partySizeAllowed: guest.partySizeAllowed,
+    rsvpStatus: guest.rsvpStatus,
+    rsvpAttendingCount: guest.rsvpAttendingCount,
+    companionNames: guest.companionNames,
+  };
+}
+
 export async function getGuestByToken(token: string): Promise<Guest | null> {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase.from("guests").select("*").eq("token", token).maybeSingle();
@@ -157,6 +176,7 @@ export async function createGuest(input: GuestCsvRow): Promise<Guest> {
       display_name: input.displayName,
       whatsapp_number: input.whatsappNumber,
       invited_by: input.invitedBy,
+      guest_location: input.guestLocation,
       party_size_allowed: input.partySizeAllowed,
     })
     .select("*")
@@ -189,6 +209,7 @@ export async function updateGuest(id: string, input: GuestCsvRow): Promise<Guest
       display_name: input.displayName,
       whatsapp_number: input.whatsappNumber,
       invited_by: input.invitedBy,
+      guest_location: input.guestLocation,
       party_size_allowed: input.partySizeAllowed,
     })
     .eq("id", id)
@@ -329,8 +350,8 @@ export async function submitRsvp(token: string, input: SubmitRsvpInput): Promise
   }
 
   const email = input.email?.trim() ?? "";
-  if (input.status === "yes" && !EMAIL_RE.test(email)) {
-    throw new RsvpValidationError("Ingresa un correo electrónico válido para recibir tu confirmación.");
+  if (!EMAIL_RE.test(email)) {
+    throw new RsvpValidationError("Ingresa un correo electrónico válido para recibir la confirmación por correo.");
   }
 
   const attendingCount = input.status === "yes" ? 1 + companionNames.length : null;
@@ -355,8 +376,9 @@ export async function submitRsvp(token: string, input: SubmitRsvpInput): Promise
   const updatedGuest = mapRow(data as GuestRow, companions);
 
   // Runs strictly after the RSVP save above has already committed; never
-  // throws, so a PDF/email failure can never roll back or block the save.
-  const confirmationSent = input.status === "yes" ? await sendGuestConfirmation(updatedGuest) : false;
+  // throws, so a PDF/email failure can never roll back or block the save. Sent for both "yes" and
+  // "no" — every guest gets a copy of their response plus a link to edit it before the deadline.
+  const confirmationSent = await sendGuestConfirmation(updatedGuest);
 
   return { guest: updatedGuest, confirmationSent };
 }
@@ -375,6 +397,7 @@ export function parseGuestCsvRows(
     const phoneDigits = (raw.whatsapp_number ?? "").replace(/\D/g, "");
     const partySizeRaw = (raw.party_size_allowed ?? "").trim();
     const invitedByRaw = (raw.invited_by ?? "").trim().toLowerCase();
+    const guestLocationRaw = (raw.guest_location ?? "").trim().toLowerCase();
 
     if (!name) {
       errors.push({ row: rowNumber, reason: "Falta el nombre." });
@@ -397,8 +420,19 @@ export function parseGuestCsvRows(
       }
       invitedBy = invitedByRaw;
     }
+    let guestLocation: GuestLocation | null = null;
+    if (guestLocationRaw !== "") {
+      if (guestLocationRaw !== "local" && guestLocationRaw !== "extranjero") {
+        errors.push({
+          row: rowNumber,
+          reason: `"guest_location" debe ser "local" o "extranjero" (o vacío): "${raw.guest_location}".`,
+        });
+        return;
+      }
+      guestLocation = guestLocationRaw;
+    }
 
-    rows.push({ name, displayName, whatsappNumber: phoneDigits, invitedBy, partySizeAllowed });
+    rows.push({ name, displayName, whatsappNumber: phoneDigits, invitedBy, guestLocation, partySizeAllowed });
   });
 
   return { rows, errors };
@@ -433,10 +467,10 @@ export async function upsertGuestsFromCsv(rows: GuestCsvRow[]): Promise<Omit<Csv
   );
   if (error) throw error;
 
-  // invited_by/display_name are only written when the CSV row explicitly
-  // specifies them, via separate targeted updates — so a re-upload with
-  // those columns blank never silently clears a value set later via the
-  // admin edit form.
+  // invited_by/guest_location/display_name are only written when the CSV row
+  // explicitly specifies them, via separate targeted updates — so a
+  // re-upload with those columns blank never silently clears a value set
+  // later via the admin edit form.
   const novioKeys = rows.filter((r) => r.invitedBy === "novio").map(importKeyOf);
   const noviaKeys = rows.filter((r) => r.invitedBy === "novia").map(importKeyOf);
   if (novioKeys.length > 0) {
@@ -446,6 +480,20 @@ export async function upsertGuestsFromCsv(rows: GuestCsvRow[]): Promise<Omit<Csv
   if (noviaKeys.length > 0) {
     const { error: noviaError } = await supabase.from("guests").update({ invited_by: "novia" }).in("import_key", noviaKeys);
     if (noviaError) throw noviaError;
+  }
+
+  const localKeys = rows.filter((r) => r.guestLocation === "local").map(importKeyOf);
+  const extranjeroKeys = rows.filter((r) => r.guestLocation === "extranjero").map(importKeyOf);
+  if (localKeys.length > 0) {
+    const { error: localError } = await supabase.from("guests").update({ guest_location: "local" }).in("import_key", localKeys);
+    if (localError) throw localError;
+  }
+  if (extranjeroKeys.length > 0) {
+    const { error: extranjeroError } = await supabase
+      .from("guests")
+      .update({ guest_location: "extranjero" })
+      .in("import_key", extranjeroKeys);
+    if (extranjeroError) throw extranjeroError;
   }
 
   for (const row of rows) {
@@ -518,7 +566,9 @@ export async function overrideRsvp(id: string, input: SubmitRsvpInput): Promise<
     input.status === "yes" ? await syncGuestCompanions(id, companionNames) : (await clearGuestCompanions(id), []);
 
   const updatedGuest = mapRow(data as GuestRow, companions);
-  const confirmationSent = input.status === "yes" ? await sendGuestConfirmation(updatedGuest) : false;
+  // Same as submitRsvp — sent for both "yes" and "no" when an email is on file (optional here,
+  // since overridden guests may have responded off-platform with no email captured).
+  const confirmationSent = await sendGuestConfirmation(updatedGuest);
 
   return { guest: updatedGuest, confirmationSent };
 }
@@ -531,7 +581,7 @@ function csvEscape(value: string): string {
 export async function exportGuestsCsv(): Promise<string> {
   const guests = await listGuests();
   const header =
-    "name,display_name,whatsapp_number,email,invited_by,party_size_allowed,rsvp_status,rsvp_attending_count,companion_names,rsvp_responded_at";
+    "name,display_name,whatsapp_number,email,invited_by,guest_location,party_size_allowed,rsvp_status,rsvp_attending_count,companion_names,rsvp_responded_at";
   const lines = guests.map((g) =>
     [
       csvEscape(g.name),
@@ -539,6 +589,7 @@ export async function exportGuestsCsv(): Promise<string> {
       g.whatsappNumber,
       g.email ?? "",
       g.invitedBy ?? "",
+      g.guestLocation ?? "",
       String(g.partySizeAllowed),
       g.rsvpStatus,
       g.rsvpAttendingCount ?? "",

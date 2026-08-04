@@ -57,6 +57,14 @@ export function EditGuestForm({ guest }: { guest: Guest }) {
           <option value="novia">Invitado de la novia</option>
         </select>
       </label>
+      <label className={styles.label}>
+        Procedencia
+        <select name="guestLocation" defaultValue={guest.guestLocation ?? ""} className={styles.select}>
+          <option value="">Sin definir</option>
+          <option value="local">Local</option>
+          <option value="extranjero">Extranjero</option>
+        </select>
+      </label>
       <SubmitButton label="Guardar cambios" pendingLabel="Guardando…" className={styles.submitButton} />
     </form>
   );

@@ -1,4 +1,4 @@
-import type { Faq, GiftAccount } from "@/types/invitation";
+import type { Faq, GiftAccount, RecommendationCategory } from "@/types/invitation";
 
 /**
  * Single source of truth for the wedding's facts, copy, and contact
@@ -77,8 +77,76 @@ export const pinterestLinks = {
   women: "https://www.pinterest.com/search/pins/?q=vestido%20largo%20negro%20gala",
 };
 
-// Placeholder — replace with the real shared recommendations document.
-export const recommendationsLink = "https://docs.google.com/document/d/PON-AQUI-TU-DOCUMENTO/edit";
+// Placeholder entries — replace name/description/address/phone/link with the real recommendations
+// before shipping. Each category renders as its own accordion item on the Recomendaciones page.
+export const recommendationCategories: RecommendationCategory[] = [
+  {
+    id: "hospedaje",
+    title: "Hospedaje",
+    entries: [
+      {
+        name: "Hotel Real Intercontinental",
+        description: "Opcion premium a 10 minutos de Hacienda El Trapiche. Frente a Mall Multiplaza Tegucigalpa, con piscina y spa.",
+        mapsLink: "https://maps.app.goo.gl/ciqmdXhsCjqLTCnu7",
+        phone: "50494612700",
+        link: "https://www.ihg.com/intercontinental/hotels/es/es/tegucigalpa/tguha/hoteldetail",
+      },
+      {
+        name: "Hotel Clarion",
+        description: "A 15 minutos de Hacienda El Trapiche. Los novios se hospedarán aquí, y recomiendan este hotel a los invitados que deseen estar cerca del lugar de la boda y estar cerca de los novios antes y después de la ceremonia.",
+        mapsLink: "https://maps.app.goo.gl/q4Vv9BQHv1CjXgjt5",
+        phone: "50431900908",
+        link: "https://www.choicehotels.com/honduras/tegucigalpa/clarion-hotels/hn004?sjrncid=GA_21646766086&sjrnaid=GA_711450267771&sjrnclid=GA_clarion%20hotel%20real%20tegucigalpa&gclsrc=aw.ds&gad_source=1&gad_campaignid=21646766086&gbraid=0AAAAA-KA7OndIzw64JoSz1zPN1DG8e57M&gclid=Cj0KCQjwm8bTBhDWARIsAC9Hi8nOWQEoVWj8oDLiGr5d1t7kzFmybqlI1LuwxpRUOwcJiWwEAC3ehmwaAqXyEALw_wcBs",
+      },
+      {
+        name: "Hotel Alameda",
+        description: "A 10 minutos de Hacienda El Trapiche. Hotel recien remodelado. Recomendado para invitados que deseen hospedarse cerca del lugar de la boda y disfrutar de un ambiente tranquilo y acogedor.",
+        mapsLink: "https://maps.app.goo.gl/W2Fx9c8rJmAzo3Nz9",
+        phone: "50422322222",
+        link: "https://hotelalameda.hn/",
+      },
+      {
+        name: "Hotel Plaza Florencia",
+        description: "A 5 minutos de Hacienda El Trapiche. Muy cerca y accesible a todos lados. Recomendado para invitados que deseen hospedarse cerca del lugar de la boda y poder movilizarse fácilmente.",
+        mapsLink: "https://maps.app.goo.gl/WmRBHj9nf3oVp32v5",
+        phone: "50422296900",
+        link: "https://florenciaplazahotel.com/",
+      }
+    ],
+  },
+  {
+    id: "belleza",
+    title: "Cabello y Maquillaje",
+    entries: [
+      {
+        name: "Oney Beauty Studio",
+        phone: "+50433875975",
+        link: "https://www.instagram.com/oneybeautystudio?igsh=MXQydWt4cm8yeWswcg==",
+      },
+      {
+        name: "I Love Makeup Studio",
+        phone: "+50431835161",
+        link: "https://www.instagram.com/ilovemakeupbeautystudio?igsh=MW5rcW93M3R5eGlpNQ==",
+      },
+    ],
+  },
+  {
+    id: "trajes",
+    title: "Alquiler de Trajes y Vestidos",
+    entries: [
+      {
+        name: "Mr. Tux",
+        phone: "+50433477851",
+        link: "https://www.instagram.com/mr.tuxhonduras?igsh=bGR5bWg5MWJxNWkz",
+      },
+      {
+        name: "Black Tie | Formal Menswear",
+        phone: "+50494022795",
+        link: "https://www.instagram.com/blacktie.hn?igsh=MWdzdXB4enlwenBqeQ==",
+      },
+    ],
+  },
+];
 
 export const mapsLink = "https://maps.google.com/?q=Hacienda+El+Trapiche+Tegucigalpa";
 
@@ -107,7 +175,8 @@ export const faqs: Faq[] = [
   { id: "05", question: "¿Hay algún código de vestimenta?", answer: "Sí, pedimos con cariño vestir de color negro. Encuentras todos los detalles en la sección de Vestimenta." },
 ];
 
-export const giftAccounts: GiftAccount[] = [
+/** Shown to local (Honduras) guests — Honduran bank accounts, impractical to wire to from abroad. */
+export const giftAccountsLocal: GiftAccount[] = [
   {
     label: "CUENTA EN LEMPIRAS · HONDURAS",
     primaryLine: "BAC Honduras",
@@ -132,6 +201,10 @@ export const giftAccounts: GiftAccount[] = [
     secondaryLine: "#200006815517 · José Eduardo Hernandez Alvarado",
     copyText: "200006815517",
   },
+];
+
+/** Shown to guests traveling from abroad — a Honduran bank transfer isn't practical for them. */
+export const giftAccountsAbroad: GiftAccount[] = [
   {
     label: "Venmo",
     primaryLine: "@Jose-Cinthia-Boda",
@@ -141,5 +214,5 @@ export const giftAccounts: GiftAccount[] = [
     label: "Paypal",
     primaryLine: "@Jeha1995",
     copyText: "@Jeha1995",
-  }
+  },
 ];

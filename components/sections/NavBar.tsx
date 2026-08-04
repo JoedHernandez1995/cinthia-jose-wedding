@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { sectionIds } from "@/config/site";
+import type { GuestViewModel } from "@/types/guest";
 import styles from "./NavBar.module.css";
 
-const navLinks = [
+const baseNavLinks = [
   { href: `#${sectionIds.historia}`, label: "HISTORIA" },
   { href: `#${sectionIds.detalles}`, label: "DETALLES" },
   { href: `#${sectionIds.rsvp}`, label: "RSVP" },
@@ -13,9 +14,19 @@ const navLinks = [
   { href: `#${sectionIds.faq}`, label: "PREGUNTAS" },
 ];
 
+interface NavBarProps {
+  guest: GuestViewModel;
+}
+
 /** Fixed top navigation linking to the invitation's main sections; collapses into a hamburger menu on mobile. */
-export function NavBar() {
+export function NavBar({ guest }: NavBarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // Recomendaciones only renders for guests traveling from abroad — dropping its link for
+  // everyone else avoids a dead anchor.
+  const navLinks =
+    guest.guestLocation === "extranjero"
+      ? baseNavLinks
+      : baseNavLinks.filter((link) => link.label !== "RECOMENDACIONES");
 
   // Closing on Escape and on route-less anchor navigation (link click) keeps the mobile menu
   // from staying open over the section the user just jumped to.

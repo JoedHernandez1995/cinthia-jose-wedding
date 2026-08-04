@@ -64,6 +64,13 @@ export function AddGuestForm() {
         <option value="novio">Invitado del novio</option>
         <option value="novia">Invitado de la novia</option>
       </select>
+      <label htmlFor="guestLocation" style={{ display: "block", marginBottom: 4, fontSize: 12, color: "#333" }}>
+        Procedencia
+      </label>
+      <select name="guestLocation" defaultValue="local" className={styles.textInput}>
+        <option value="local">Local</option>
+        <option value="extranjero">Extranjero</option>
+      </select>
       <SubmitButton label="Agregar" pendingLabel="Agregando…" className={styles.primaryButton} />
     </form>
   );

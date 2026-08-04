@@ -3,6 +3,9 @@ export type RsvpStatus = "pending" | "yes" | "no";
 /** Which side of the couple invited this guest. Null means not yet assigned. */
 export type InvitedBy = "novio" | "novia";
 
+/** Local (Honduras) vs. traveling from abroad — gates Ubicación/Recomendaciones and the gift-account list. Null (not yet assigned) is treated as local. */
+export type GuestLocation = "local" | "extranjero";
+
 /** A single named plus-one, with their own identity and check-in code (one QR each). */
 export interface GuestCompanion {
   id: string;
@@ -21,6 +24,7 @@ export interface Guest {
   email: string | null;
   checkinCode: string;
   invitedBy: InvitedBy | null;
+  guestLocation: GuestLocation | null;
   /** Total people allowed in this guest's party, including the named guest themselves. */
   partySizeAllowed: number;
   inviteSent: boolean;
@@ -46,6 +50,7 @@ export interface GuestCsvRow {
   displayName: string | null;
   whatsappNumber: string;
   invitedBy: InvitedBy | null;
+  guestLocation: GuestLocation | null;
   partySizeAllowed: number;
 }
 
@@ -67,6 +72,7 @@ export interface GuestViewModel {
   /** Resolved: `displayName` if set, otherwise `name` — always ready to render. */
   displayName: string;
   email: string | null;
+  guestLocation: GuestLocation | null;
   partySizeAllowed: number;
   rsvpStatus: RsvpStatus;
   rsvpAttendingCount: number | null;

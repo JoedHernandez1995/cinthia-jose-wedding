@@ -136,6 +136,7 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
             <tr>
               <th>Nombre</th>
               <th>Lado</th>
+              <th>Procedencia</th>
               <th>WhatsApp</th>
               <th>Personas</th>
               <th>Invitación</th>
@@ -156,6 +157,11 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                   {guest.invitedBy === "novio" && <span className={styles.badgeSent}>Novio</span>}
                   {guest.invitedBy === "novia" && <span className={styles.badgeYes}>Novia</span>}
                   {!guest.invitedBy && <span className={styles.badgePending}>Sin definir</span>}
+                </td>
+                <td>
+                  {guest.guestLocation === "extranjero" && <span className={styles.badgeSent}>Extranjero</span>}
+                  {guest.guestLocation === "local" && <span className={styles.badgeYes}>Local</span>}
+                  {!guest.guestLocation && <span className={styles.badgePending}>Sin definir</span>}
                 </td>
                 <td className={styles.mono}>{guest.whatsappNumber}</td>
                 <td>{guest.partySizeAllowed}</td>
@@ -224,7 +230,7 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className={styles.empty}>
+                <td colSpan={9} className={styles.empty}>
                   No hay invitados que coincidan.
                 </td>
               </tr>

@@ -1,8 +1,7 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { InvitationPage } from "@/components/InvitationPage";
-import { getGuestByToken, recordGuestView } from "@/lib/guests";
-import type { GuestViewModel } from "@/types/guest";
+import { getGuestByToken, recordGuestView, toGuestViewModel } from "@/lib/guests";
 
 // Always hit the database — this must never be statically cached, since it
 // reflects live RSVP/view state per guest.
@@ -15,16 +14,5 @@ export default async function GuestInvitationPage({ params }: { params: { token:
   const userAgent = headers().get("user-agent");
   await recordGuestView(guest.id, userAgent);
 
-  const guestViewModel: GuestViewModel = {
-    token: guest.token,
-    name: guest.name,
-    displayName: guest.displayName || guest.name,
-    email: guest.email,
-    partySizeAllowed: guest.partySizeAllowed,
-    rsvpStatus: guest.rsvpStatus,
-    rsvpAttendingCount: guest.rsvpAttendingCount,
-    companionNames: guest.companionNames,
-  };
-
-  return <InvitationPage guest={guestViewModel} />;
+  return <InvitationPage guest={toGuestViewModel(guest)} />;
 }

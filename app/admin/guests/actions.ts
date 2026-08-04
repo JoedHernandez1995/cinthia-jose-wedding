@@ -15,11 +15,16 @@ import {
   updateGuest,
   upsertGuestsFromCsv,
 } from "@/lib/guests";
-import type { CsvUploadResult, InvitedBy, RsvpStatus } from "@/types/guest";
+import type { CsvUploadResult, GuestLocation, InvitedBy, RsvpStatus } from "@/types/guest";
 
 function parseInvitedBy(raw: FormDataEntryValue | null): InvitedBy | null {
   const value = String(raw ?? "");
   return value === "novio" || value === "novia" ? value : null;
+}
+
+function parseGuestLocation(raw: FormDataEntryValue | null): GuestLocation | null {
+  const value = String(raw ?? "");
+  return value === "local" || value === "extranjero" ? value : null;
 }
 
 export interface ActionResult {
@@ -49,6 +54,7 @@ export async function addSingleGuest(_prevState: ActionResult | null, formData: 
   const whatsappNumber = String(formData.get("whatsappNumber") ?? "").replace(/\D/g, "");
   const partySizeAllowed = Number(formData.get("partySizeAllowed") ?? 1);
   const invitedBy = parseInvitedBy(formData.get("invitedBy"));
+  const guestLocation = parseGuestLocation(formData.get("guestLocation"));
 
   if (!name || !whatsappNumber) {
     return { ok: false, message: "El nombre y el número de WhatsApp son obligatorios." };
@@ -60,6 +66,7 @@ export async function addSingleGuest(_prevState: ActionResult | null, formData: 
       displayName,
       whatsappNumber,
       invitedBy,
+      guestLocation,
       partySizeAllowed: Number.isFinite(partySizeAllowed) && partySizeAllowed >= 1 ? partySizeAllowed : 1,
     });
   } catch (error) {
@@ -80,6 +87,7 @@ export async function editGuestAction(_prevState: ActionResult | null, formData:
   const whatsappNumber = String(formData.get("whatsappNumber") ?? "").replace(/\D/g, "");
   const partySizeAllowed = Number(formData.get("partySizeAllowed") ?? 1);
   const invitedBy = parseInvitedBy(formData.get("invitedBy"));
+  const guestLocation = parseGuestLocation(formData.get("guestLocation"));
 
   if (!id || !name || !whatsappNumber) {
     return { ok: false, message: "El nombre y el número de WhatsApp son obligatorios." };
@@ -91,6 +99,7 @@ export async function editGuestAction(_prevState: ActionResult | null, formData:
       displayName,
       whatsappNumber,
       invitedBy,
+      guestLocation,
       partySizeAllowed: Number.isFinite(partySizeAllowed) && partySizeAllowed >= 1 ? partySizeAllowed : 1,
     });
   } catch (error) {

@@ -2,18 +2,24 @@
 
 import { Reveal } from "@/components/ui/Reveal";
 import { GoldDivider } from "@/components/ui/GoldDivider";
-import { giftAccounts } from "@/config/site";
+import { giftAccountsAbroad, giftAccountsLocal } from "@/config/site";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import type { GuestViewModel } from "@/types/guest";
 import styles from "./GiftSection.module.css";
 
 const giftIntroCopy =
-  "Lo que más deseamos es compartir este día con ustedes y celebrar a su lado el comienzo de esta nueva etapa." + 
+  "Lo que más deseamos es compartir este día con ustedes y celebrar a su lado el comienzo de esta nueva etapa." +
   " Su presencia y cariño son el mejor regalo que podríamos recibir. Si desean tener un detalle con nosotros, " +
   "agradeceremos de corazón una contribución para nuestros nuevos proyectos y sueños.";
 
-/** "Más Que Un Regalo" section: gift-registry accounts with copy-to-clipboard buttons. */
-export function GiftSection() {
+interface GiftSectionProps {
+  guest: GuestViewModel;
+}
+
+/** "Más Que Un Regalo" section: gift-registry accounts with copy-to-clipboard buttons — local bank accounts, or PayPal/Venmo for guests traveling from abroad. */
+export function GiftSection({ guest }: GiftSectionProps) {
   const { copiedIndex, copy } = useCopyToClipboard();
+  const giftAccounts = guest.guestLocation === "extranjero" ? giftAccountsAbroad : giftAccountsLocal;
 
   return (
     <section className={styles.section}>

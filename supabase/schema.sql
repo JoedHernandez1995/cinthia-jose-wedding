@@ -9,6 +9,7 @@ create table if not exists guests (
   name text not null,
   whatsapp_number text not null,
   invited_by text check (invited_by in ('novio', 'novia')), -- which side invited this guest; null = not yet assigned
+  guest_location text check (guest_location in ('local', 'extranjero')), -- local vs. traveling from abroad; null = not yet assigned, treated as local
   party_size_allowed int not null default 1 check (party_size_allowed >= 1), -- total people allowed, including the named guest
   invite_sent boolean not null default false,
   invite_sent_at timestamptz,
@@ -52,6 +53,10 @@ create index if not exists guests_checkin_code_idx on guests (checkin_code);
 -- individual guest's name (e.g. "Familia Martínez" for Raúl Martínez + 3
 -- plus-ones). Falls back to `name` when null.
 alter table guests add column if not exists display_name text;
+
+-- Migration for local-vs-abroad guest gating (Ubicación/Recomendaciones
+-- sections + gift-account list differ by this) — no-op on a fresh install.
+alter table guests add column if not exists guest_location text check (guest_location in ('local', 'extranjero'));
 
 -- Migration: `plus_ones_allowed` ("additional companions beyond the named
 -- guest") renamed to `party_size_allowed` ("total people allowed, including

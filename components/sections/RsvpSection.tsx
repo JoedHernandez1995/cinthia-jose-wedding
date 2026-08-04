@@ -25,6 +25,7 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
   const [email, setEmail] = useState(guest.email);
   const [confirmationSent, setConfirmationSent] = useState(true);
   const [mode, setMode] = useState<"choosing" | "confirmed">(guest.rsvpStatus === "pending" ? "choosing" : "confirmed");
+  const [modalIntent, setModalIntent] = useState<"yes" | "no">("yes");
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
@@ -73,11 +74,13 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
   }
 
   function handleYesClick() {
+    setModalIntent("yes");
     setModalOpen(true);
   }
 
   function handleNoClick() {
-    performSubmit("no", "", []);
+    setModalIntent("no");
+    setModalOpen(true);
   }
 
   return (
@@ -151,13 +154,14 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
 
       {modalOpen && (
         <RsvpCompanionModal
+          intent={modalIntent}
           partySizeAllowed={guest.partySizeAllowed}
           initialEmail={email}
           initialCompanionNames={companionNames}
           submitting={submitting}
           errorMessage={errorMessage}
           onCancel={() => setModalOpen(false)}
-          onConfirm={(nextEmail, names) => performSubmit("yes", nextEmail, names)}
+          onConfirm={(nextEmail, names) => performSubmit(modalIntent, nextEmail, names)}
         />
       )}
     </RsvpShell>

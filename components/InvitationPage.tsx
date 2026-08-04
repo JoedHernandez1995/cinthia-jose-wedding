@@ -35,7 +35,7 @@ export function InvitationPage({ guest }: InvitationPageProps) {
       <EnvelopeIntro guest={guest} />
 
       <div className={styles.container}>
-        <NavBar />
+        <NavBar guest={guest} />
         <HeroSection />
         <StorySection />
         <ParentsBlessingSection />
@@ -43,11 +43,11 @@ export function InvitationPage({ guest }: InvitationPageProps) {
         <PhotoMarquee />
         <VenueDetailsSection />
         <RsvpSection guest={guest} />
-        <LocationSection />
+        {guest.guestLocation === "extranjero" && <LocationSection />}
         <DressCodeSection />
         <FaqSection />
-        <GiftSection />
-        <RecommendationsSection />
+        <GiftSection guest={guest} />
+        {guest.guestLocation === "extranjero" && <RecommendationsSection guest={guest} />}
         <ClosingImageSection />
         <SiteFooter />
       </div>

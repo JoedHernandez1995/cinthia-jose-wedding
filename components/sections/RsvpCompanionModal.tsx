@@ -7,6 +7,8 @@ import styles from "./RsvpCompanionModal.module.css";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface RsvpCompanionModalProps {
+  /** "yes" collects the full party (email + companions); "no" only needs an email to send the decline confirmation. */
+  intent: "yes" | "no";
   /** Total people allowed in the party, including the guest themselves. */
   partySizeAllowed: number;
   initialEmail: string | null;
@@ -17,8 +19,9 @@ interface RsvpCompanionModalProps {
   onConfirm: (email: string, companionNames: string[]) => void;
 }
 
-/** Email (always required) + a companion count selector (capped at `partySizeAllowed - 1`) with one name input per confirmed companion. */
+/** Email (always required) + a companion count selector (capped at `partySizeAllowed - 1`, "yes" only) with one name input per confirmed companion. */
 export function RsvpCompanionModal({
+  intent,
   partySizeAllowed,
   initialEmail,
   initialCompanionNames,
@@ -27,7 +30,7 @@ export function RsvpCompanionModal({
   onCancel,
   onConfirm,
 }: RsvpCompanionModalProps) {
-  const maxCompanions = partySizeAllowed - 1;
+  const maxCompanions = intent === "yes" ? partySizeAllowed - 1 : 0;
   const [email, setEmail] = useState(initialEmail ?? "");
   const [names, setNames] = useState<string[]>(() => {
     const initial = initialCompanionNames.slice(0, maxCompanions);
@@ -49,7 +52,7 @@ export function RsvpCompanionModal({
 
   const emailValid = EMAIL_RE.test(email.trim());
   const namesValid = names.every((n) => n.trim().length > 0);
-  const canSubmit = emailValid && namesValid;
+  const canSubmit = intent === "yes" ? emailValid && namesValid : emailValid;
 
   return createPortal(
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-labelledby="rsvp-modal-heading">
@@ -64,7 +67,7 @@ export function RsvpCompanionModal({
           ×
         </button>
         <h3 id="rsvp-modal-heading" className={styles.heading}>
-          Confirma tu asistencia
+          {intent === "yes" ? "Confirma tu asistencia" : "Confirma tu respuesta"}
         </h3>
 
         <label className={styles.fieldLabel}>
@@ -79,7 +82,11 @@ export function RsvpCompanionModal({
             disabled={submitting}
           />
         </label>
-        <p className={styles.fieldHint}>Te enviaremos tu comprobante con código QR a este correo.</p>
+        <p className={styles.fieldHint}>
+          {intent === "yes"
+            ? "Te enviaremos tu comprobante con código QR a este correo."
+            : "Te enviaremos la confirmación de tu respuesta a este correo."}
+        </p>
 
         {maxCompanions > 0 && (
           <>
@@ -121,7 +128,9 @@ export function RsvpCompanionModal({
 
         {!canSubmit && !submitting && (
           <p className={styles.fieldHint}>
-            {!emailValid ? "Ingresa un correo electrónico válido." : "Escribe el nombre de cada acompañante."}
+            {!emailValid
+              ? "Ingresa un correo electrónico válido."
+              : "Escribe el nombre de cada acompañante."}
           </p>
         )}
 
@@ -135,7 +144,7 @@ export function RsvpCompanionModal({
             onClick={() => onConfirm(email.trim(), names.map((n) => n.trim()))}
             disabled={submitting || !canSubmit}
           >
-            {submitting ? "Guardando..." : "Confirmar"}
+            {submitting ? "Guardando..." : intent === "yes" ? "Confirmar" : "Enviar respuesta"}
           </button>
         </div>
       </div>

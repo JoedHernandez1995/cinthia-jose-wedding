@@ -11,7 +11,11 @@ function getResendClient(): Resend {
 export interface SendRsvpConfirmationEmailInput {
   to: string;
   guestName: string;
-  pdfBuffer: Buffer;
+  status: "yes" | "no";
+  /** Personal token — builds the `/i/[token]#rsvp` link so the guest can edit their response. */
+  token: string;
+  /** Only set when `status` is "yes" — a "no" RSVP has no check-in QR codes to send. */
+  pdfBuffer?: Buffer;
 }
 
 /**
@@ -37,7 +41,7 @@ const summaryFields: Array<{ label: string; value: string }> = [
  * so this intentionally falls back to system font stacks rather than the site's Poppins/Slight —
  * that's an inherent email-client limitation, not something worth fighting here.
  */
-function buildConfirmationEmailHtml(guestName: string): string {
+function buildConfirmationEmailHtml(guestName: string, status: "yes" | "no", editLink: string): string {
   const siteUrl = getSiteUrl();
   const summaryRows = summaryFields
     .map(
@@ -53,6 +57,33 @@ function buildConfirmationEmailHtml(guestName: string): string {
     )
     .join("");
 
+  const introText =
+    status === "yes"
+      ? `¡Hola ${guestName}! Gracias por confirmar tu asistencia. Estamos muy felices de poder celebrar este día junto a ti.`
+      : `Hola ${guestName}, recibimos tu respuesta indicando que no podrás acompañarnos. Lamentamos que no puedas estar, pero agradecemos mucho que nos hayas avisado.`;
+
+  const editText =
+    status === "yes"
+      ? `¿Cambiaron tus planes? Si necesitas cambiar tu respuesta antes del ${wedding.rsvpDeadlineLabel} puedes editar tu respuesta en el siguiente enlace.`
+      : `Te extrañaremos. Si cambias de opinión antes del ${wedding.rsvpDeadlineLabel} puedes editar tu respuesta en el siguiente enlace.`;
+
+  const summarySection =
+    status === "yes"
+      ? `
+        <div style="padding: 0 32px 28px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: ${brandColors.bgAlt}; border: 1px solid ${brandColors.border}; border-radius: 6px; padding: 4px 18px;">
+            ${summaryRows}
+          </table>
+        </div>
+
+        <div style="padding: 0 32px 28px; text-align: center;">
+          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: ${brandColors.mutedLight};">
+            Adjunto encontrarás tu comprobante en PDF con el resumen del evento y tu código QR de
+            acceso — preséntalo (impreso o desde tu celular) al llegar. ¡Nos vemos pronto!
+          </p>
+        </div>`
+      : "";
+
   return `
     <div style="background: ${brandColors.bg}; padding: 32px 16px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
       <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid ${brandColors.border};">
@@ -63,22 +94,19 @@ function buildConfirmationEmailHtml(guestName: string): string {
           </h1>
           <div style="width: 48px; height: 2px; background: ${brandColors.gold}; margin: 0 auto 18px;"></div>
           <p style="margin: 0; font-size: 15px; line-height: 1.6; color: ${brandColors.muted};">
-            ¡Hola ${guestName}! Gracias por confirmar tu asistencia. Estamos muy felices de poder celebrar
-            este día junto a ti.
+            ${introText}
           </p>
         </div>
 
-        <div style="padding: 0 32px 28px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: ${brandColors.bgAlt}; border: 1px solid ${brandColors.border}; border-radius: 6px; padding: 4px 18px;">
-            ${summaryRows}
-          </table>
-        </div>
+        ${summarySection}
 
         <div style="padding: 0 32px 32px; text-align: center;">
-          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: ${brandColors.mutedLight};">
-            Adjunto encontrarás tu comprobante en PDF con el resumen del evento y tu código QR de
-            acceso — preséntalo (impreso o desde tu celular) al llegar. ¡Nos vemos pronto!
+          <p style="margin: 0 0 18px; font-size: 13px; line-height: 1.6; color: ${brandColors.mutedLight};">
+            ${editText}
           </p>
+          <a href="${editLink}" style="display: inline-block; background: ${brandColors.gold}; color: #ffffff; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-decoration: none; padding: 12px 24px; border-radius: 4px;">
+            Editar mi respuesta
+          </a>
         </div>
 
         <div style="padding: 16px 32px; background: ${brandColors.bgAlt}; border-top: 1px solid ${brandColors.border}; text-align: center;">
@@ -90,21 +118,27 @@ function buildConfirmationEmailHtml(guestName: string): string {
     </div>`;
 }
 
-export async function sendRsvpConfirmationEmail({ to, guestName, pdfBuffer }: SendRsvpConfirmationEmailInput): Promise<void> {
+export async function sendRsvpConfirmationEmail({ to, guestName, status, token, pdfBuffer }: SendRsvpConfirmationEmailInput): Promise<void> {
   const resend = getResendClient();
   const fromEmail = requireEnv("RESEND_FROM_EMAIL");
+  const editLink = `${getSiteUrl()}/i/${token}#rsvp`;
 
   const { error } = await resend.emails.send({
     from: fromEmail,
     to,
-    subject: `Confirmación de asistencia — Boda ${coupleNames.full}`,
-    html: buildConfirmationEmailHtml(guestName),
-    attachments: [
-      {
-        filename: "Confirmacion-Boda.pdf",
-        content: pdfBuffer,
-      },
-    ],
+    subject:
+      status === "yes"
+        ? `Confirmación de asistencia — Boda ${coupleNames.full}`
+        : `Recibimos tu respuesta — Boda ${coupleNames.full}`,
+    html: buildConfirmationEmailHtml(guestName, status, editLink),
+    attachments: pdfBuffer
+      ? [
+          {
+            filename: "Confirmacion-Boda.pdf",
+            content: pdfBuffer,
+          },
+        ]
+      : undefined,
   });
 
   if (error) {
