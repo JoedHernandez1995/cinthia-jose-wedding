@@ -1,0 +1,36 @@
+.wrap {
+  min-height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+  background: var(--color-bg);
+}
+
+.monogram {
+  width: 160px;
+  height: auto;
+  margin-bottom: 28px;
+}
+
+.names {
+  composes: sectionHeading from global;
+  font-size: clamp(28px, 8vw, 48px);
+  margin-bottom: 14px;
+}
+
+.date {
+  font: 500 11px/1.75 var(--font-label);
+  color: var(--color-taupe-light);
+  letter-spacing: 0.18em;
+}
+
+.note {
+  font: 400 italic 14px/1.7 var(--font-serif);
+  color: var(--color-muted-light);
+  max-width: 320px;
+  margin: 0;
+}

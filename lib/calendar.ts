@@ -1,4 +1,4 @@
-interface CalendarEventInput {
+export interface CalendarEventInput {
   summary: string;
   location: string;
   description: string;
@@ -8,9 +8,9 @@ interface CalendarEventInput {
   endUtc: string;
 }
 
-/** Builds a downloadable `data:text/calendar` URI for a single-event .ics file. */
-export function buildCalendarDownloadLink(event: CalendarEventInput): string {
-  const icsContent = [
+/** Builds the raw contents of a single-event .ics file. */
+export function buildCalendarIcsContent(event: CalendarEventInput): string {
+  return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "BEGIN:VEVENT",
@@ -22,6 +22,9 @@ export function buildCalendarDownloadLink(event: CalendarEventInput): string {
     "END:VEVENT",
     "END:VCALENDAR",
   ].join("\n");
+}
 
-  return `data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`;
+/** Builds a downloadable `data:text/calendar` URI for a single-event .ics file. */
+export function buildCalendarDownloadLink(event: CalendarEventInput): string {
+  return `data:text/calendar;charset=utf-8,${encodeURIComponent(buildCalendarIcsContent(event))}`;
 }

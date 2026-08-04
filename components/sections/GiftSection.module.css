@@ -1,14 +1,14 @@
 .section {
+  composes: sectionBorderTop from global;
   padding: 96px 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.07);
   text-align: center;
-  box-sizing: border-box;
 }
 
 .heading {
   composes: sectionHeading from global;
-  font-size: clamp(18px, 7vw, 34px);
+  font-size: 2.1rem;
   margin-bottom: 14px;
+  margin-top: 15px;
 }
 
 .intro {
@@ -29,9 +29,8 @@
 }
 
 .accountCard {
-  background: var(--color-bg-alt);
+  composes: panel from global;
   border: 1px solid var(--color-border);
-  border-radius: 2px;
   padding: 16px 18px;
 }
 

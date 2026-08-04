@@ -1,0 +1,6 @@
+.button {
+  composes: button from "./GoldButtonLink.module.css";
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}

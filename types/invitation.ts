@@ -1,5 +1,3 @@
-export type RsvpChoice = "yes" | "no" | null;
-
 export interface Faq {
   id: string;
   question: string;

@@ -1,14 +1,12 @@
 import { Reveal } from "@/components/ui/Reveal";
 import { Photo } from "@/components/ui/Photo";
 import { GoldDivider } from "@/components/ui/GoldDivider";
-import { GoldButtonLink } from "@/components/ui/GoldButtonLink";
+import { AddToCalendarButton } from "@/components/ui/AddToCalendarButton";
 import { calendarEvent, sectionIds, wedding } from "@/config/site";
-import { buildCalendarDownloadLink } from "@/lib/calendar";
 import { useLiveCountdown } from "@/hooks/useLiveCountdown";
 import styles from "./VenueDetailsSection.module.css";
 
 const weddingTargetDate = new Date(wedding.dateTimeIso);
-const calendarDownloadLink = buildCalendarDownloadLink(calendarEvent);
 
 /** "Lugar y Fecha" section: venue photos, live countdown, and add-to-calendar action. */
 export function VenueDetailsSection() {
@@ -47,9 +45,9 @@ export function VenueDetailsSection() {
           ))}
         </div>
         <div className={styles.calendarButtonWrap}>
-          <GoldButtonLink href={calendarDownloadLink} download={calendarEvent.fileName}>
+          <AddToCalendarButton event={calendarEvent} fileName={calendarEvent.fileName}>
             Agregar al calendario
-          </GoldButtonLink>
+          </AddToCalendarButton>
         </div>
       </Reveal>
     </section>

@@ -14,11 +14,6 @@ export function HeroSection() {
         <div className={styles.names}>{coupleNames.full}</div>
         <div className={styles.date}>{wedding.heroDateLabel}</div>
         <GoldDivider width={24} margin="0 auto 16px" />
-        <div className={styles.venue}>
-          {wedding.venueName}
-          <br />
-          {wedding.venueCity}
-        </div>
         <div className={styles.photoFrame}>
           <div className={styles.photoShadow} />
           <Photo id="hero-photo" alt="Foto de la pareja" className={styles.heroPhoto} />

@@ -21,7 +21,7 @@
      of wrapping once the vw-based size gets too large for narrow phones. */
   font-size: clamp(24px, calc((100vw - 56px) / 9.85), 68px);
   white-space: nowrap;
-  margin: 8px 0 18px;
+  margin: 8px 0 36px;
 }
 
 .date {

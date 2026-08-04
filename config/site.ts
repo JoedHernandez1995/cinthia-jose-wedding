@@ -38,7 +38,8 @@ export const calendarEvent = {
   description: "Celebración de la boda de José y Cinthia.",
   // Same instant as `wedding.dateTimeIso` above, expressed in UTC for ICS.
   startUtc: "20261107T220000Z",
-  endUtc: "20261108T040000Z",
+  // Nov 8, 1:00 AM -06:00 == 07:00 UTC.
+  endUtc: "20261108T070000Z",
 };
 
 // Contact placeholder — replace with the real WhatsApp number before shipping.
@@ -49,8 +50,20 @@ export const WHATSAPP_NUMBER = "50499999999";
 export const plannerWhatsAppNumber = "50488888888";
 
 export const whatsappMessages = {
-  rsvpYes: "¡Hola! Confirmo que asistiré a la boda de José & Cinthia el 7 de noviembre. ¡Nos vemos ahí! 🎉",
-  rsvpNo: "Hola, lamentablemente no podré asistir a la boda de José & Cinthia el 7 de noviembre. ¡Muchas felicidades a ambos!",
+  // The wedding planner only sees these messages as raw WhatsApp texts, so the guest's name (and,
+  // for a group RSVP, their family label + companion names) must always be spelled out in the text
+  // itself — she has no other way to know who's writing her.
+  rsvpYes: (guestName: string, familyLabel: string | null, companionNames: string[]): string => {
+    if (companionNames.length === 0) {
+      return `Hola, soy ${guestName} confirmando que asistiré a la boda de José & Cinthia el 7 de noviembre.`;
+    }
+    const namePart = familyLabel ? `${guestName} de la ${familyLabel}` : guestName;
+    return `Hola, soy ${namePart} confirmando que asistiremos junto con ${companionNames.join(", ")}, a la boda de José & Cinthia el 7 de noviembre.`;
+  },
+  rsvpNo: (guestName: string): string =>
+    `Hola, soy ${guestName}. Lamentablemente no podré asistir a la boda de José & Cinthia el 7 de noviembre. ¡Muchas felicidades a ambos!`,
+  rsvpLastMinute: (guestName: string): string =>
+    `Hola, soy ${guestName}. La ventana de confirmación para la boda de José & Cinthia ya cerró, pero necesito avisar de un cambio de último momento en mi respuesta.`,
   dressCodeQuestion: "¡Hola! Tengo una duda sobre el atuendo para la boda de José & Cinthia.",
 };
 
@@ -97,19 +110,36 @@ export const faqs: Faq[] = [
 export const giftAccounts: GiftAccount[] = [
   {
     label: "CUENTA EN LEMPIRAS · HONDURAS",
-    primaryLine: "Banco: BAC Honduras",
-    secondaryLine: "Cuenta de ahorros: 000-000-0000 · José López",
-    copyText: "000-000-0000",
+    primaryLine: "BAC Honduras",
+    secondaryLine: "#749334921 · José Eduardo Hernandez Alvarado",
+    copyText: "749334921",
   },
   {
     label: "CUENTA EN DÓLARES · HONDURAS",
-    primaryLine: "Banco: Banco Atlántida",
-    secondaryLine: "Cuenta de ahorros: 000-000-0000 · Cinthia Cruz",
-    copyText: "000-000-0000",
+    primaryLine: "BAC Honduras",
+    secondaryLine: "#753329341 · José Eduardo Hernandez Alvarado",
+    copyText: "753329341",
   },
   {
-    label: "VENMO · PARA INVITADOS EN EE.UU.",
+    label: "CUENTA EN LEMPIRAS · HONDURAS",
+    primaryLine: "FICOHSA",
+    secondaryLine: "#200021669112 · José Eduardo Hernandez Alvarado",
+    copyText: "200021669112",
+  },
+  {
+    label: "CUENTA EN DÓLARES · HONDURAS",
+    primaryLine: "FICOHSA",
+    secondaryLine: "#200006815517 · José Eduardo Hernandez Alvarado",
+    copyText: "200006815517",
+  },
+  {
+    label: "Venmo",
     primaryLine: "@Jose-Cinthia-Boda",
     copyText: "@Jose-Cinthia-Boda",
   },
+  {
+    label: "Paypal",
+    primaryLine: "@Jeha1995",
+    copyText: "@Jeha1995",
+  }
 ];

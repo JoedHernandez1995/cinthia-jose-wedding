@@ -3,63 +3,24 @@
 import { useState } from "react";
 import { Reveal } from "@/components/ui/Reveal";
 import { GoldDivider } from "@/components/ui/GoldDivider";
+import { GoldButtonLink } from "@/components/ui/GoldButtonLink";
 import { RsvpCompanionModal } from "@/components/sections/RsvpCompanionModal";
-import { WHATSAPP_NUMBER, plannerWhatsAppNumber, sectionIds, wedding, whatsappMessages } from "@/config/site";
-import { buildPlannerNotificationMessage, buildWhatsAppLink } from "@/lib/whatsapp";
+import { faqContact, plannerWhatsAppNumber, sectionIds, wedding, whatsappMessages } from "@/config/site";
+import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { submitRsvpAction } from "@/app/i/[token]/actions";
 import type { GuestViewModel, RsvpStatus } from "@/types/guest";
-import type { RsvpChoice } from "@/types/invitation";
 import styles from "./RsvpSection.module.css";
-
-const genericConfirmationCopy: Record<Exclude<RsvpChoice, null>, string> = {
-  yes: "¡Gracias por confirmar! Nos vemos el 7 de noviembre 🎉",
-  no: "¡Gracias por avisarnos! Te vamos a extrañar.",
-};
-
-const genericYesLink = buildWhatsAppLink(WHATSAPP_NUMBER, whatsappMessages.rsvpYes);
-const genericNoLink = buildWhatsAppLink(WHATSAPP_NUMBER, whatsappMessages.rsvpNo);
 
 const isPastDeadline = () => Date.now() > new Date(wedding.rsvpDeadlineIso).getTime();
 
 interface RsvpSectionProps {
-  /** Only set on a guest's personal `/i/[token]` page. Root `/` renders the generic fallback below. */
-  guest?: GuestViewModel;
-}
-
-export function RsvpSection({ guest }: RsvpSectionProps) {
-  if (guest) return <GuestRsvpForm guest={guest} />;
-  return <GenericRsvpFallback />;
-}
-
-/** Root `/` (no guest identity) — unchanged from before: static `wa.me` links, no persistence. */
-function GenericRsvpFallback() {
-  const [rsvpChoice, setRsvpChoice] = useState<RsvpChoice>(null);
-
-  return (
-    <RsvpShell>
-      {rsvpChoice && <div className={styles.confirmation}>{genericConfirmationCopy[rsvpChoice]}</div>}
-      <div className={styles.buttonList}>
-        <a href={genericYesLink} onClick={() => setRsvpChoice("yes")} target="_blank" rel="noopener" className={styles.yesButton}>
-          SÍ ASISTIRÉ
-        </a>
-        <a
-          href={genericNoLink}
-          onClick={() => setRsvpChoice("no")}
-          target="_blank"
-          rel="noopener"
-          className={`${styles.noButton} ${rsvpChoice === "no" ? styles.noButtonSelected : ""}`}
-        >
-          NO PODRÉ ASISTIR
-        </a>
-      </div>
-    </RsvpShell>
-  );
+  /** Always set: `RsvpSection` only renders from a guest's personal `/i/[token]` page. */
+  guest: GuestViewModel;
 }
 
 /** Guest's personal page — real form backed by the database, editable indefinitely. */
-function GuestRsvpForm({ guest }: { guest: GuestViewModel }) {
+export function RsvpSection({ guest }: RsvpSectionProps) {
   const [status, setStatus] = useState<RsvpStatus>(guest.rsvpStatus);
-  const [attendingCount, setAttendingCount] = useState(guest.rsvpAttendingCount);
   const [companionNames, setCompanionNames] = useState(guest.companionNames);
   const [email, setEmail] = useState(guest.email);
   const [confirmationSent, setConfirmationSent] = useState(true);
@@ -67,6 +28,14 @@ function GuestRsvpForm({ guest }: { guest: GuestViewModel }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
+
+  const pastDeadline = isPastDeadline();
+  const neverResponded = status === "pending";
+  // After the deadline, self-serve editing closes — both for guests who already answered and for
+  // those who never did — and they're routed to the planner instead.
+  const showChoiceButtons = mode === "choosing" && !(pastDeadline && neverResponded);
+  const showClosedContact = pastDeadline && (mode === "confirmed" || (mode === "choosing" && neverResponded));
+  const plannerLastMinuteLink = buildWhatsAppLink(plannerWhatsAppNumber, whatsappMessages.rsvpLastMinute(guest.name));
 
   async function performSubmit(nextStatus: Exclude<RsvpStatus, "pending">, nextEmail: string, nextCompanionNames: string[]) {
     setSubmitting(true);
@@ -86,14 +55,20 @@ function GuestRsvpForm({ guest }: { guest: GuestViewModel }) {
     }
 
     setStatus(nextStatus);
-    setAttendingCount(result.rsvpAttendingCount);
     setCompanionNames(result.companionNames);
     setEmail(nextEmail || email);
     setConfirmationSent(result.confirmationSent);
     setMode("confirmed");
     setModalOpen(false);
 
-    const plannerMessage = buildPlannerNotificationMessage(guest.name, nextStatus, result.companionNames);
+    // Only treat displayName as a real "family label" when it's distinct from the guest's own
+    // name — a lone guest with no group display name set would otherwise read as "Jane Doe de la
+    // Jane Doe", which is nonsensical.
+    const familyLabel = guest.displayName !== guest.name ? guest.displayName : null;
+    const plannerMessage =
+      nextStatus === "yes"
+        ? whatsappMessages.rsvpYes(guest.name, familyLabel, result.companionNames)
+        : whatsappMessages.rsvpNo(guest.name);
     window.open(buildWhatsAppLink(plannerWhatsAppNumber, plannerMessage), "_blank");
   }
 
@@ -107,22 +82,27 @@ function GuestRsvpForm({ guest }: { guest: GuestViewModel }) {
 
   return (
     <RsvpShell>
-      {isPastDeadline() && mode === "choosing" && (
+      {showClosedContact && neverResponded && (
         <p className={styles.confirmation}>
-          La fecha límite para confirmar ({wedding.rsvpDeadlineLabel}) ya pasó, pero con gusto recibimos tu respuesta.
+          El tiempo para confirmar tu asistencia ya se cerró, te extrañaremos. Puedes contactarte con{" "}
+          {faqContact.name} en caso de que tengas cualquier duda.
         </p>
       )}
 
       {mode === "confirmed" && status !== "pending" && (
         <div className={styles.confirmation}>
           {status === "yes" ? (
-            <>
-              Confirmaste: tú{attendingCount && attendingCount > 1 ? ` + ${attendingCount - 1}` : ""}
-              {attendingCount && attendingCount > 1 && (attendingCount - 1 === 1 ? " acompañante" : " acompañantes")}
-              {companionNames.length > 0 && <> ({companionNames.join(", ")})</>}
-            </>
+            companionNames.length > 0 ? (
+              <>
+                {guest.name}, gracias por confirmar su asistencia. Miembros confirmados: {companionNames.join(", ")}. Los esperamos!
+              </>
+            ) : (
+              <>{guest.name}, gracias por confirmar tu asistencia. Te esperamos!</>
+            )
           ) : (
-            "Indicaste que no podrás asistir."
+            <>
+              {guest.name}, Nos indicaste que no podrás acompañarnos. Te extrañaremos, pero te agradecemos que nos hayas avisado.
+            </>
           )}
         </div>
       )}
@@ -135,7 +115,7 @@ function GuestRsvpForm({ guest }: { guest: GuestViewModel }) {
 
       {errorMessage && <p className={styles.error}>{errorMessage}</p>}
 
-      {mode === "choosing" ? (
+      {showChoiceButtons ? (
         <div className={styles.buttonList}>
           <button type="button" onClick={handleYesClick} disabled={submitting} className={styles.yesButton}>
             SÍ ASISTIRÉ
@@ -149,9 +129,23 @@ function GuestRsvpForm({ guest }: { guest: GuestViewModel }) {
             NO PODRÉ ASISTIR
           </button>
         </div>
+      ) : showClosedContact ? (
+        <div className={styles.closedWindow}>
+          {!neverResponded && (
+            <p className={styles.closedWindowText}>
+              La ventana de confirmación ya cerró. Si necesitas cancelar tu asistencia o avisarnos de un cambio de
+              último momento, contacta a <b>{faqContact.name}</b>, nuestra wedding planner.
+            </p>
+          )}
+          <GoldButtonLink href={plannerLastMinuteLink} target="_blank" rel="noopener">
+            Contactar a {faqContact.name}
+          </GoldButtonLink>
+        </div>
       ) : (
         <button type="button" className={styles.editButton} onClick={() => setMode("choosing")}>
-          Editar respuesta
+          {companionNames.length > 0
+            ? "¿Cambiaron de planes? Todavía pueden editar su respuesta"
+            : "¿Cambiaste de planes? Todavía puedes editar tu respuesta"}
         </button>
       )}
 

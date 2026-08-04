@@ -1,8 +1,7 @@
 .section {
+  composes: sectionBorderTop from global;
   padding: 70px 0;
   text-align: center;
-  border-top: 1px solid rgba(0, 0, 0, 0.07);
-  box-sizing: border-box;
 }
 
 .dedication {

@@ -20,8 +20,8 @@ import type { GuestViewModel } from "@/types/guest";
 import styles from "./InvitationPage.module.css";
 
 interface InvitationPageProps {
-  /** Only set when rendered from a guest's personal `/i/[token]` page. Root `/` renders with no guest. */
-  guest?: GuestViewModel;
+  /** Always set: rendered only from a guest's personal `/i/[token]` page; root `/` renders `HomeLanding` instead. */
+  guest: GuestViewModel;
 }
 
 /**

@@ -7,9 +7,9 @@ import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import styles from "./GiftSection.module.css";
 
 const giftIntroCopy =
-  "Lo único que realmente necesitamos ese día es tenerlos cerca, celebrando con nosotros el inicio de esta nueva etapa. " +
-  "Su cariño y su presencia ya son suficiente. Si desean tener un gesto con nosotros, una contribución en efectivo " +
-  "para nuestra nueva etapa sería recibida con todo nuestro cariño.";
+  "Lo que más deseamos es compartir este día con ustedes y celebrar a su lado el comienzo de esta nueva etapa." + 
+  " Su presencia y cariño son el mejor regalo que podríamos recibir. Si desean tener un detalle con nosotros, " +
+  "agradeceremos de corazón una contribución para nuestros nuevos proyectos y sueños.";
 
 /** "Más Que Un Regalo" section: gift-registry accounts with copy-to-clipboard buttons. */
 export function GiftSection() {
@@ -18,7 +18,7 @@ export function GiftSection() {
   return (
     <section className={styles.section}>
       <Reveal>
-        <div className={styles.heading}>Más Que Un Regalo</div>
+        <div className={styles.heading}>Para Nuestros Sueños</div>
         <GoldDivider width={28} margin="0 auto" />
         <p className={styles.intro}>{giftIntroCopy}</p>
         <div className={styles.accountList}>

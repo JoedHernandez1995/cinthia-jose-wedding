@@ -1,15 +1,14 @@
 .section {
+  composes: sectionBorderTop from global;
   padding: 96px 0;
   text-align: center;
-  border-top: 1px solid rgba(0, 0, 0, 0.07);
-  box-sizing: border-box;
 }
 
 .vinylWrap {
   position: relative;
   width: 150px;
   height: 150px;
-  margin: 0 auto 20px;
+  margin: 0 auto 44px;
 }
 
 @keyframes spin-vinyl {
@@ -59,9 +58,56 @@
   background: transparent;
 }
 
+.tapPulseRing {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 46px;
+  height: 46px;
+  margin-left: -23px;
+  margin-bottom: -23px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-gold);
+  pointer-events: none;
+  animation: tap-pulse-ring 2.2s ease-out infinite;
+}
+
+.tapPulseRingDelay {
+  animation-delay: 1.1s;
+}
+
+@keyframes tap-pulse-ring {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+.tapHint {
+  font: 500 10px/1.75 var(--font-label);
+  color: var(--color-taupe);
+  letter-spacing: 0.15em;
+  margin: 0 0 20px;
+  animation: pulse-hint 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse-hint {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .heading {
   composes: sectionHeading from global;
-  font-size: clamp(22px, 7vw, 36px);
+  font-size: 2.1rem;
   margin-bottom: 18px;
 }
 

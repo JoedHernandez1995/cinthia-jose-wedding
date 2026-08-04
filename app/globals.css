@@ -79,3 +79,43 @@ a:hover {
   line-height: 1.2;
   color: var(--color-ink);
 }
+
+/*
+ * Shared section-shell border + box-sizing (composed into each section's
+ * `.section` class via `composes: sectionBorderTop/Bottom from global`).
+ * Padding/scroll-margin/text-align genuinely differ per section and stay local.
+ */
+.sectionBorderTop {
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  box-sizing: border-box;
+}
+.sectionBorderBottom {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  box-sizing: border-box;
+}
+
+/* Shared "bg-alt panel" card base, composed by DressCodeSection/GiftSection/RsvpSection cards. */
+.panel {
+  background: var(--color-bg-alt);
+  border-radius: 2px;
+}
+
+/* Shared inline form-validation error style, composed by RsvpSection/RsvpCompanionModal. */
+.formError {
+  font: 400 13px/1.5 var(--font-label);
+  color: #b3423f;
+  background: #fbeceb;
+  border: 1px solid #f0c9c7;
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+
+/* Shared text-input styling, composed by RsvpCompanionModal's select/name inputs. */
+.formInput {
+  font: 400 14px/1.4 var(--font-label);
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--color-ink);
+}

@@ -4,25 +4,119 @@
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 800px;
   box-sizing: border-box;
   z-index: 30;
-  background: rgba(242, 239, 233, 0.92);
+  background: rgba(242, 239, 233, 0.7);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
+  padding: calc(25px + env(safe-area-inset-top)) 28px 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 10px rgba(60, 50, 35, 0.08);
+}
+
+.navLinks {
   display: flex;
   justify-content: center;
   gap: 18px;
   flex-wrap: nowrap;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  padding: calc(18px + env(safe-area-inset-top)) 28px 18px;
   font: 500 10px/1.75 var(--font-label);
   color: var(--color-muted);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   letter-spacing: 0.15em;
   scrollbar-width: none;
 }
 
 .navLink {
   flex: none;
+}
+
+.menuButton {
+  all: unset;
+  display: none;
+  box-sizing: border-box;
+  cursor: pointer;
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 32px;
+  border: 1.5px solid var(--color-gold);
+  border-radius: 10px;
+}
+
+.menuIcon,
+.menuIcon::before,
+.menuIcon::after {
+  content: "";
+  display: block;
+  position: absolute;
+  left: 50%;
+  width: 18px;
+  height: 2px;
+  margin-left: -9px;
+  border-radius: 2px;
+  background: var(--color-gold);
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.menuIcon {
+  top: 50%;
+  transform: translateY(-50%);
+}
+.menuIcon::before {
+  top: -6px;
+}
+.menuIcon::after {
+  top: 6px;
+}
+
+.menuIconOpen {
+  background: transparent;
+}
+.menuIconOpen::before {
+  top: 0;
+  transform: rotate(45deg);
+}
+.menuIconOpen::after {
+  top: 0;
+  transform: rotate(-45deg);
+}
+
+.mobileMenu {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .navLinks {
+    display: none;
+  }
+  .menuButton {
+    display: block;
+  }
+  .mobileMenu {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-bg-alt);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 12px 20px rgba(60, 50, 35, 0.08);
+    padding: 4px 28px calc(12px + env(safe-area-inset-bottom));
+  }
+  .mobileNavLink {
+    font: 500 11px/1 var(--font-label);
+    letter-spacing: 0.15em;
+    color: var(--color-muted);
+    padding: 16px 4px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+  .mobileNavLink:last-child {
+    border-bottom: none;
+  }
 }

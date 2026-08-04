@@ -1,5 +1,5 @@
-import { InvitationPage } from "@/components/InvitationPage";
+import { HomeLanding } from "@/components/HomeLanding";
 
 export default function Home() {
-  return <InvitationPage />;
+  return <HomeLanding />;
 }

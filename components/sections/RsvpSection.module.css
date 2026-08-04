@@ -1,14 +1,13 @@
 .section {
+  composes: sectionBorderTop from global;
   padding: 96px 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.07);
   text-align: center;
   scroll-margin-top: 70px;
-  box-sizing: border-box;
 }
 
 .heading {
   composes: sectionHeading from global;
-  font-size: clamp(24px, 8vw, 38px);
+  font-size: 2.1rem;
   margin-bottom: 14px;
 }
 
@@ -27,9 +26,8 @@
 }
 
 .card {
-  background: var(--color-bg-alt);
+  composes: panel from global;
   border: 1.5px solid rgba(43, 41, 38, 0.35);
-  border-radius: 2px;
   padding: 36px 28px;
   max-width: 340px;
   margin: 0 auto;
@@ -50,6 +48,7 @@
 .yesButton {
   display: block;
   width: 100%;
+  box-sizing: border-box;
   background: var(--color-gold);
   color: var(--color-ink);
   font: 500 11px/1.9 var(--font-label);
@@ -71,6 +70,7 @@
 .noButton {
   display: block;
   width: 100%;
+  box-sizing: border-box;
   background: transparent;
   color: var(--color-ink);
   border: 1.5px solid var(--color-ink);
@@ -104,12 +104,7 @@
 }
 
 .error {
-  font: 400 13px/1.5 var(--font-label);
-  color: #b3423f;
-  background: #fbeceb;
-  border: 1px solid #f0c9c7;
-  border-radius: 4px;
-  padding: 10px 12px;
+  composes: formError from global;
   margin: 0 0 16px;
 }
 
@@ -117,4 +112,17 @@
   font: 400 12px/1.6 var(--font-label);
   color: var(--color-muted-light);
   margin: -8px 0 16px;
+}
+
+.closedWindow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.closedWindowText {
+  font: 400 12px/1.6 var(--font-label);
+  color: var(--color-muted-light);
+  margin: 0;
 }
