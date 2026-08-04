@@ -76,7 +76,16 @@ a:hover {
 .sectionHeading {
   font-family: var(--font-display);
   font-weight: 400;
-  line-height: 1.2;
+  /*
+   * 1.2 clips the tops of this script font's tall ascenders/loops on iOS
+   * Safari — its text renderer paints glyphs that exceed a tight line box
+   * instead of letting them overflow like desktop browsers do. A taller
+   * line-height (plus a little top padding, since the extra line-height
+   * alone still left glyphs flush against the box edge on iOS) gives the
+   * glyph enough room within its own line box that it never gets clipped.
+   */
+  line-height: 1.5;
+  padding-top: 0.15em;
   color: var(--color-ink);
 }
 

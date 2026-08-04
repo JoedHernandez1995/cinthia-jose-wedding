@@ -17,20 +17,24 @@ function isIos(): boolean {
 /**
  * A plain `<a href="data:...">` with a `download` attribute silently does nothing on iOS Safari
  * and most in-app browsers (WhatsApp/Instagram/Facebook), which is where guests actually tap this
- * link from. iOS instead recognizes a `text/calendar` data URI when navigated to directly (no
- * `download` attribute), prompting to add the event to Calendar; everywhere else, a Blob object
- * URL triggers a real file download.
+ * link from. Safari also increasingly blocks script-triggered top-level navigation to `data:`
+ * URIs outright (anti-phishing hardening), so even navigating directly to one isn't reliable
+ * anymore. A `Blob` object URL avoids both problems: Safari fetches it like a real file, still
+ * sees its `text/calendar` MIME type, and prompts to add the event to Calendar. Everywhere else,
+ * the same object URL is used to trigger a real file download via a temporary `<a download>`.
  */
 export function AddToCalendarButton({ event, fileName, children }: AddToCalendarButtonProps) {
   function handleClick() {
     const icsContent = buildCalendarIcsContent(event);
+    const blobUrl = URL.createObjectURL(new Blob([icsContent], { type: "text/calendar;charset=utf-8" }));
 
     if (isIos()) {
-      window.location.href = `data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`;
+      // Don't revoke here — navigation is async, and Safari needs the URL to still be valid by
+      // the time it fetches it. Let it get garbage-collected on page unload instead.
+      window.location.href = blobUrl;
       return;
     }
 
-    const blobUrl = URL.createObjectURL(new Blob([icsContent], { type: "text/calendar;charset=utf-8" }));
     const link = document.createElement("a");
     link.href = blobUrl;
     link.download = fileName;
