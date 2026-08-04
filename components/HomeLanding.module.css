@@ -19,7 +19,7 @@
 .names {
   composes: sectionHeading from global;
   font-size: clamp(28px, 8vw, 48px);
-  margin-bottom: 14px;
+  margin-bottom: 30px;
 }
 
 .date {

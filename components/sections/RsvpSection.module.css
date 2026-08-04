@@ -9,6 +9,7 @@
   composes: sectionHeading from global;
   font-size: 2.1rem;
   margin-bottom: 14px;
+  margin-top: 20px;
 }
 
 .deadlineIntro {
