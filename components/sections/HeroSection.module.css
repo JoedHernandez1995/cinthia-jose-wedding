@@ -65,4 +65,8 @@
   filter: grayscale(1);
   clip-path: ellipse(50% 50% at 50% 50%);
   object-fit: cover;
+  /* The source photo has a lot of empty sky/skyline above the couple — center-cropping (the
+     default) was eating into their feet at the bottom to compensate. Biasing toward the bottom
+     keeps their feet in frame and crops the empty sky instead. */
+  object-position: center 85%;
 }
