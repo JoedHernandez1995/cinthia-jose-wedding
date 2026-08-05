@@ -59,13 +59,13 @@ function buildConfirmationEmailHtml(guestName: string, status: "yes" | "no", edi
 
   const introText =
     status === "yes"
-      ? `¡Hola ${guestName}! Gracias por confirmar tu asistencia. Estamos muy felices de poder celebrar este día junto a ti.`
-      : `Hola ${guestName}, recibimos tu respuesta indicando que no podrás acompañarnos. Lamentamos que no puedas estar, pero agradecemos mucho que nos hayas avisado.`;
+      ? `¡Qué alegría saber que vas a acompañarnos! Gracias por confirmar. Nos hace mucha ilusión compartir este día con vos.`
+      : `Entendemos que esta vez no vas a poder acompañarnos. Gracias por avisarnos. Nos hubiera encantado tenerte con nosotros.`;
 
   const editText =
     status === "yes"
-      ? `¿Cambiaron tus planes? Si necesitas cambiar tu respuesta antes del ${wedding.rsvpDeadlineLabel} puedes editar tu respuesta en el siguiente enlace.`
-      : `Te extrañaremos. Si cambias de opinión antes del ${wedding.rsvpDeadlineLabel} puedes editar tu respuesta en el siguiente enlace.`;
+      ? `¿Cambiaste de planes? No pasa nada. Podés actualizar tu respuesta antes del ${wedding.rsvpDeadlineLabel} desde el siguiente enlace.`
+      : `¿Cambiaste de planes? Nos encantaría que pudieras acompañarnos. Podés actualizar tu respuesta antes del ${wedding.rsvpDeadlineLabel} desde el siguiente enlace.`;
 
   const summarySection =
     status === "yes"

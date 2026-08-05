@@ -34,8 +34,8 @@ export function DressCodeSection() {
       <Reveal>
         <div className={styles.heading}>Vestimenta</div>
         <p className={styles.intro}>
-          Nos encantaría que el día de nuestra boda se sienta atemporal, elegante y romántico, en honor a los
-          novios, te pedimos vestir de color negro.
+          Nos encantaría que el día de nuestra boda se sienta atemporal, elegante y romántico. Por eso te pedimos,
+          con cariño, vestir de color negro.
         </p>
         <div className={styles.cardList}>
           <DressCodeCard
@@ -59,7 +59,7 @@ export function DressCodeSection() {
           />
         </div>
         <p className={styles.questionPrompt}>
-          <GoldButtonLink href={dressCodeQuestionLink}>Dudas sobre tu atuendo, presiona aquí</GoldButtonLink>
+          <GoldButtonLink href={dressCodeQuestionLink}>¿Dudas sobre tu atuendo? Presioná aquí</GoldButtonLink>
         </p>
       </Reveal>
     </section>

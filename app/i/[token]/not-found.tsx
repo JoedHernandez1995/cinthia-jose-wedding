@@ -18,7 +18,7 @@ export default function GuestNotFound() {
         Invitación no encontrada
       </h1>
       <p style={{ color: "var(--color-muted)", maxWidth: 360 }}>
-        Este enlace no es válido o ha expirado. Si crees que esto es un error, contáctanos directamente.
+        Este enlace no es válido o ya expiró. Si creés que esto es un error, contactanos directamente.
       </p>
     </div>
   );

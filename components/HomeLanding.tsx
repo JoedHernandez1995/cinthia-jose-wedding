@@ -14,7 +14,7 @@ export function HomeLanding() {
       <div className={styles.names}>{coupleNames.full}</div>
       <div className={styles.date}>07 · 11 · 2026</div>
       <GoldDivider width={28} margin="0 auto 28px" />
-      <p className={styles.note}>Esta invitación es personal. Revisa el enlace que te compartimos.</p>
+      <p className={styles.note}>Esta invitación es personal. Buscá el enlace que te compartimos.</p>
     </div>
   );
 }

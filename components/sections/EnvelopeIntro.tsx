@@ -41,7 +41,7 @@ export function EnvelopeIntro({ guest, onEmailSaved }: EnvelopeIntroProps) {
 
     const trimmed = email.trim();
     if (!EMAIL_RE.test(trimmed)) {
-      setError("Ingresa un correo electrónico válido para continuar.");
+      setError("Ingresá un correo electrónico válido para continuar.");
       return;
     }
 
@@ -63,7 +63,7 @@ export function EnvelopeIntro({ guest, onEmailSaved }: EnvelopeIntroProps) {
   return (
     <div className={`${styles.overlay} ${isClosing ? styles.overlayClosing : ""}`}>
       <div className={styles.guestName}>{guest.displayName}</div>
-      <div className={styles.eyebrow}>{hasCompanions ? "TIENEN UNA INVITACIÓN" : "TIENES UNA INVITACIÓN"}</div>
+      <div className={styles.eyebrow}>{hasCompanions ? "TIENEN UNA INVITACIÓN" : "TENÉS UNA INVITACIÓN"}</div>
       <div className={styles.from}>de</div>
       <div className={styles.names}>{coupleNames.full}</div>
       <div className={styles.validity}>
@@ -81,7 +81,7 @@ export function EnvelopeIntro({ guest, onEmailSaved }: EnvelopeIntroProps) {
             className={styles.emailInput}
             disabled={submitting}
           />
-          <p className={styles.emailHint}>Ingresa tu correo para ver tu invitación.</p>
+          <p className={styles.emailHint}>Ingresá tu correo para ver tu invitación.</p>
           {error && <p className={styles.emailError}>{error}</p>}
         </div>
       )}
@@ -89,7 +89,7 @@ export function EnvelopeIntro({ guest, onEmailSaved }: EnvelopeIntroProps) {
       <button onClick={handleOpenClick} disabled={submitting} className={styles.envelopeButton}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/assets/envelope.png" alt="Sobre" className={styles.envelopeImage} />
-        <div className={styles.tapHint}>{submitting ? "GUARDANDO..." : "PRESIONA PARA ABRIR"}</div>
+        <div className={styles.tapHint}>{submitting ? "GUARDANDO..." : "PRESIONÁ PARA ABRIR"}</div>
       </button>
     </div>
   );

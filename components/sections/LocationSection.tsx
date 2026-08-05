@@ -5,8 +5,8 @@ import { mapsLink, wedding } from "@/config/site";
 import styles from "./LocationSection.module.css";
 
 const directions = [
-  'La forma más cómoda de llegar es en Uber, fácil de conseguir en Tegucigalpa, busca "Hacienda El Trapiche" o "La Cuisinete" y llegarás sin problema.',
-  "Si vienes en vehículo propio, busca los mismos nombres en tu GPS: encontrarás parqueo disponible en el lugar, incluyendo servicio de valet.",
+  'La forma más cómoda de llegar es en Uber, fácil de conseguir en Tegucigalpa, buscá "Hacienda El Trapiche" o "La Cuisinete" y llegás sin problema.',
+  "Si venís en vehículo propio, buscá los mismos nombres en tu GPS: vas a encontrar parqueo disponible en el lugar, incluyendo servicio de valet.",
 ];
 
 /** "Ubicación" section with the venue address and directions guidance. */

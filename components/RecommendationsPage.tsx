@@ -71,10 +71,10 @@ export function RecommendationsPage({ token }: RecommendationsPageProps) {
 
         <Reveal>
           <div className={styles.header}>
-            <div className={styles.eyebrow}>Con cariño para ti</div>
+            <div className={styles.eyebrow}>Con cariño para vos</div>
             <h1 className={styles.heading}>Recomendaciones</h1>
             <p className={styles.intro}>
-              Sabemos que vienes desde lejos para acompañarnos, así que reunimos algunas opciones de
+              Sabemos que venís desde lejos para acompañarnos, así que reunimos algunas opciones de
               hospedaje, cabello y maquillaje, y alquiler de trajes que nos encantan, para que tu viaje
               sea aún más especial.
             </p>

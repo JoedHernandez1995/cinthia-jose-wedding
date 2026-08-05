@@ -50,7 +50,7 @@ export function SongSection() {
             </>
           )}
         </div>
-        <div className={styles.tapHint}>TOCA PARA REPRODUCIR</div>
+        <div className={styles.tapHint}>TOCÁ PARA REPRODUCIR</div>
         <div className={styles.heading}>Nuestra Canción</div>
         <div className={styles.description}>
           Mucho antes de que hubiera una fecha, un lugar o una boda que planear, hubo pequeños momentos que poco a

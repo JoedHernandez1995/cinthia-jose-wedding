@@ -93,8 +93,8 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
     <RsvpShell>
       {showClosedContact && neverResponded && (
         <p className={styles.confirmation}>
-          El tiempo para confirmar tu asistencia ya se cerró, te extrañaremos. Puedes contactarte con{" "}
-          {faqContact.name} en caso de que tengas cualquier duda.
+          El tiempo para confirmar tu asistencia ya se cerró, te vamos a extrañar. Podés contactarte con{" "}
+          {faqContact.name} si tenés cualquier duda.
         </p>
       )}
 
@@ -103,14 +103,14 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
           {status === "yes" ? (
             companionNames.length > 0 ? (
               <>
-                {guest.name}, gracias por confirmar su asistencia. Miembros confirmados: {companionNames.join(", ")}. Los esperamos!
+                {guest.name}, ¡gracias por confirmar! Van a venir junto con: {companionNames.join(", ")}. Los esperamos con muchas ganas.
               </>
             ) : (
-              <>{guest.name}, gracias por confirmar tu asistencia. Te esperamos!</>
+              <>{guest.name}, ¡gracias por confirmar! Te esperamos con muchas ganas.</>
             )
           ) : (
             <>
-              {guest.name}, Nos indicaste que no podrás acompañarnos. Te extrañaremos, pero te agradecemos que nos hayas avisado.
+              {guest.name}, nos avisaste que no vas a poder acompañarnos. Te vamos a extrañar, pero gracias por decirnos.
             </>
           )}
         </div>
@@ -154,8 +154,8 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
         <div className={styles.closedWindow}>
           {!neverResponded && (
             <p className={styles.closedWindowText}>
-              La ventana de confirmación ya cerró. Si necesitas cancelar tu asistencia o avisarnos de un cambio de
-              último momento, contacta a <b>{faqContact.name}</b>, nuestra wedding planner.
+              La ventana de confirmación ya cerró. Si necesitás cancelar tu asistencia o avisarnos de un cambio de
+              último momento, contactá a <b>{faqContact.name}</b>, nuestra wedding planner.
             </p>
           )}
           <GoldButtonLink href={plannerLastMinuteLink} target="_blank" rel="noopener">
@@ -166,7 +166,7 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
         <button type="button" className={styles.editButton} onClick={() => setMode("choosing")}>
           {companionNames.length > 0
             ? "¿Cambiaron de planes? Todavía pueden editar su respuesta"
-            : "¿Cambiaste de planes? Todavía puedes editar tu respuesta"}
+            : "¿Cambiaste de planes? Todavía podés editar tu respuesta"}
         </button>
       )}
     </RsvpShell>

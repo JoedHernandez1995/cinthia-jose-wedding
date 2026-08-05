@@ -143,7 +143,7 @@ export function InvitationPdfDocument(props: InvitationPdfDocumentProps) {
         ))}
 
         <Text style={styles.footer}>
-          Presenta este código QR (impreso o desde tu celular) al llegar al evento. ¡Te esperamos!
+          Presentá este código QR (impreso o desde tu celular) al llegar al evento. ¡Te esperamos!
         </Text>
       </Page>
     </Document>

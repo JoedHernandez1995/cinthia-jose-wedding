@@ -21,7 +21,7 @@ export function VenueDetailsSection() {
         <div className={styles.dateLabel}>{wedding.dateLabel}</div>
         <div className={styles.timeLabel}>{wedding.timeLabel}</div>
         <div className={styles.adultsOnlyNote}>
-          Amamos a los niños, pero esta celebración será exclusivamente para adultos. Gracias por su comprensión.
+          Amamos a los niños, pero esta celebración será exclusivamente para adultos. Gracias por entendernos.
         </div>
         <div className={styles.photoStack}>
           <div className={styles.mainPhotoFrame}>

@@ -17,7 +17,7 @@ export function RecommendationsSection({ guest }: RecommendationsSectionProps) {
         <div className={styles.heading}>Recomendaciones</div>
         <GoldDivider width={28} margin="0 auto" />
         <p className={styles.description}>
-          Reunimos hospedaje, cabello y maquillaje, y alquiler de trajes de confianza en una sola lista.
+          Juntamos en un solo lugar hospedaje, cabello y maquillaje, y alquiler de trajes que recomendamos con confianza.
         </p>
         <div className={styles.buttonWrap}>
           <GoldButtonLink href={`/i/${guest.token}/recomendaciones`}>

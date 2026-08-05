@@ -192,11 +192,11 @@ export const marqueePhotoIds = [
 ];
 
 export const faqs: Faq[] = [
-  { id: "01", question: "¿Puedo traer un invitado?", answer: "Debido a espacio limitado, solo podremos recibir a los invitados indicados en la invitación. Agradecemos su comprensión." },
-  { id: "02", question: "¿Están invitados los niños?", answer: "Aunque adoramos a los más pequeños, hemos decidido que nuestra celebración sea solo para adultos. Agradecemos su comprensión." },
-  { id: "03", question: "¿La ceremonia y recepción son al aire libre?", answer: "Sí, todo el evento será al aire libre. La recepción se realizará bajo un toldo cubierto, sin aire acondicionado." },
+  { id: "01", question: "¿Puedo traer un invitado?", answer: "Por el espacio limitado, solo podemos recibir a quienes están indicados en la invitación. Gracias por entendernos." },
+  { id: "02", question: "¿Están invitados los niños?", answer: "Aunque adoramos a los más pequeños, decidimos que esta celebración sea solo para adultos. Gracias por entendernos." },
+  { id: "03", question: "¿La ceremonia y recepción son al aire libre?", answer: "Sí, todo el evento va a ser al aire libre. La recepción va a ser bajo un toldo cubierto, sin aire acondicionado." },
   { id: "04", question: "¿Puedo tomar fotos durante la ceremonia?", answer: "Preferimos que no. Contamos con fotografía y videografía profesional para eso. Te pedimos guardar el teléfono y disfrutar el momento con nosotros." },
-  { id: "05", question: "¿Hay algún código de vestimenta?", answer: "Sí, pedimos con cariño vestir de color negro. Encuentras todos los detalles en la sección de Vestimenta." },
+  { id: "05", question: "¿Hay algún código de vestimenta?", answer: "Sí, pedimos con cariño vestir de color negro. Encontrás todos los detalles en la sección de Vestimenta." },
 ];
 
 /** Shown to local (Honduras) guests — Honduran bank accounts, impractical to wire to from abroad. */

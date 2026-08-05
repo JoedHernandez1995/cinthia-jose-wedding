@@ -14,7 +14,7 @@ export function FaqSection() {
         <div className={styles.heading}>Preguntas Frecuentes</div>
         <div className={styles.contactPrompt}>
           <p className={styles.contactText}>
-            Si tienen dudas o alguna consulta en específico, por favor contactarse con <b>{faqContact.name}</b>
+            Si tienen dudas o alguna consulta en específico, escríbanle a <b>{faqContact.name}</b>
           </p>
           <GoldButtonLink href={whatsappContactLink} target="_blank" rel="noopener">
             Contactar por WhatsApp

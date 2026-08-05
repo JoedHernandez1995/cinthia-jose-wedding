@@ -81,7 +81,7 @@ export function RsvpCompanionFields({
 
       {errorMessage && <p className={styles.error}>{errorMessage}</p>}
       {!namesValid && !submitting && names.length > 0 && (
-        <p className={styles.fieldHint}>Escribe el nombre de cada acompañante.</p>
+        <p className={styles.fieldHint}>Escribí el nombre de cada acompañante.</p>
       )}
 
       <div className={styles.actions}>
