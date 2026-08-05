@@ -789,11 +789,27 @@ export async function getGuestSideBreakdown(): Promise<SideBreakdown[]> {
   });
 }
 
-/** Builds the admin-side outbound `wa.me` link — the guest's personal RSVP URL, pre-filled in the message text. */
-export function buildGuestInviteLink(guest: Pick<Guest, "name" | "token" | "whatsappNumber">): string {
+/**
+ * Builds the admin-side outbound `wa.me` link — the guest's personal RSVP URL, pre-filled in the
+ * message text. Greets by `displayName` when set (a family label, e.g. "Familia Reyes Alvarado")
+ * rather than the individual guest's `name`, and switches to plural phrasing only when there's
+ * both a display name *and* room for others (`partySizeAllowed > 1`) — a guest with no display
+ * name but a plus-one (bringing a date, not a family) stays singular, since the message is still
+ * addressed to that one person.
+ */
+export function buildGuestInviteLink(
+  guest: Pick<Guest, "name" | "displayName" | "token" | "whatsappNumber" | "partySizeAllowed">,
+): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const personalUrl = `${siteUrl}/i/${guest.token}`;
-  const message = `¡Hola ${guest.name}! Te compartimos tu invitación personal a la boda de José & Cinthia:\n${personalUrl}`;
+  const greetingName = guest.displayName || guest.name;
+  const isPlural = Boolean(guest.displayName) && guest.partySizeAllowed > 1;
+
+  const body = isPlural
+    ? "Queremos compartir con ustedes algo muy especial: su invitación a nuestra boda. Nos hará mucha ilusión tenerlos con nosotros en este día tan importante."
+    : "Queremos compartir contigo algo muy especial: tu invitación a nuestra boda. Nos hará mucha ilusión tenerte con nosotros en este día tan importante.";
+
+  const message = `${greetingName} 💛\n\n${body}\n\nJosé & Cinthia\n\n${personalUrl}`;
   return buildWhatsAppLink(guest.whatsappNumber, message);
 }
 
