@@ -5,8 +5,9 @@ import { supabaseAnonKey, supabaseUrl } from "./env";
 const PUBLIC_ADMIN_PATHS = ["/admin/login"];
 
 /**
- * Refreshes the Supabase auth session on every request and gates `/admin/**`
- * (except `/admin/login`) behind a valid session, redirecting to login otherwise.
+ * Refreshes the Supabase auth session on every request and gates `/admin/**` (except
+ * `/admin/login`) and `/checkin/**` (door check-in via QR scan, staff-only) behind a valid
+ * session, redirecting to login otherwise.
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -33,10 +34,10 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isAdminRoute = path.startsWith("/admin");
+  const isProtectedRoute = path.startsWith("/admin") || path.startsWith("/checkin");
   const isPublicAdminPath = PUBLIC_ADMIN_PATHS.some((p) => path.startsWith(p));
 
-  if (isAdminRoute && !isPublicAdminPath && !user) {
+  if (isProtectedRoute && !isPublicAdminPath && !user) {
     const loginUrl = new URL("/admin/login", request.url);
     loginUrl.searchParams.set("next", path);
     return NextResponse.redirect(loginUrl);

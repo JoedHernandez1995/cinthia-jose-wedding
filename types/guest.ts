@@ -11,6 +11,8 @@ export interface GuestCompanion {
   id: string;
   name: string;
   checkinCode: string;
+  checkedIn: boolean;
+  checkedInAt: string | null;
 }
 
 /** Row shape of the `guests` table, camelCased. */
@@ -34,6 +36,8 @@ export interface Guest {
   /** Derived from `companions` (source of truth) — kept for callers that only need names. */
   companionNames: string[];
   companions: GuestCompanion[];
+  checkedIn: boolean;
+  checkedInAt: string | null;
   rsvpRespondedAt: string | null;
   confirmationSentAt: string | null;
   confirmationSendError: string | null;
@@ -84,4 +88,20 @@ export interface SubmitRsvpInput {
   companionNames: string[];
   /** Required (validated) when status is "yes" on the guest-facing form; optional on admin override. */
   email?: string;
+}
+
+/** Result of scanning a check-in QR code (guest or companion) at `/checkin/[code]`. */
+export interface CheckinResult {
+  personName: string;
+  /** The primary guest's name — same as `personName` when the scanned code belongs to the guest themselves. */
+  guestName: string;
+  isCompanion: boolean;
+  alreadyCheckedIn: boolean;
+  checkedInAt: string;
+}
+
+/** One entry in a guest's admin-facing activity timeline (views, RSVP submissions, check-ins), newest first. */
+export interface ActivityEntry {
+  label: string;
+  occurredAt: string;
 }

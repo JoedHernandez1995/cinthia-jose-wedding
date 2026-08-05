@@ -15,7 +15,7 @@ export async function login(formData: FormData) {
     redirect(`/admin/login?error=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`);
   }
 
-  redirect(next.startsWith("/admin") ? next : "/admin");
+  redirect(next.startsWith("/admin") || next.startsWith("/checkin") ? next : "/admin");
 }
 
 export async function signOut() {

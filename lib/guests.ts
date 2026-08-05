@@ -4,6 +4,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { sendGuestConfirmation } from "@/lib/confirmation";
 import type {
+  ActivityEntry,
+  CheckinResult,
   CsvRowError,
   CsvUploadResult,
   Guest,
@@ -37,6 +39,8 @@ interface GuestRow {
   rsvp_responded_at: string | null;
   confirmation_sent_at: string | null;
   confirmation_send_error: string | null;
+  checked_in: boolean;
+  checked_in_at: string | null;
   first_viewed_at: string | null;
   last_viewed_at: string | null;
   view_count: number;
@@ -50,10 +54,18 @@ interface GuestCompanionRow {
   name: string;
   checkin_code: string;
   position: number;
+  checked_in: boolean;
+  checked_in_at: string | null;
 }
 
 function mapCompanionRow(row: GuestCompanionRow): GuestCompanion {
-  return { id: row.id, name: row.name, checkinCode: row.checkin_code };
+  return {
+    id: row.id,
+    name: row.name,
+    checkinCode: row.checkin_code,
+    checkedIn: row.checked_in,
+    checkedInAt: row.checked_in_at,
+  };
 }
 
 function mapRow(row: GuestRow, companions: GuestCompanion[]): Guest {
@@ -74,6 +86,8 @@ function mapRow(row: GuestRow, companions: GuestCompanion[]): Guest {
     rsvpAttendingCount: row.rsvp_attending_count,
     companionNames: companions.map((c) => c.name),
     companions,
+    checkedIn: row.checked_in,
+    checkedInAt: row.checked_in_at,
     rsvpRespondedAt: row.rsvp_responded_at,
     confirmationSentAt: row.confirmation_sent_at,
     confirmationSendError: row.confirmation_send_error,
@@ -89,7 +103,7 @@ async function fetchCompanions(guestId: string): Promise<GuestCompanion[]> {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("guest_companions")
-    .select("id, guest_id, name, checkin_code, position")
+    .select("id, guest_id, name, checkin_code, position, checked_in, checked_in_at")
     .eq("guest_id", guestId)
     .order("position");
   if (error) throw error;
@@ -104,7 +118,7 @@ async function fetchCompanionsForGuestIds(guestIds: string[]): Promise<Map<strin
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("guest_companions")
-    .select("id, guest_id, name, checkin_code, position")
+    .select("id, guest_id, name, checkin_code, position, checked_in, checked_in_at")
     .in("guest_id", guestIds)
     .order("position");
   if (error) throw error;
@@ -295,7 +309,13 @@ async function syncGuestCompanions(guestId: string, names: string[]): Promise<Gu
     const match = existing.find((e) => !claimed.has(e.id) && normalize(e.name) === normalize(name));
     if (match) {
       claimed.add(match.id);
-      result[position] = { id: match.id, name, checkinCode: match.checkinCode };
+      result[position] = {
+        id: match.id,
+        name,
+        checkinCode: match.checkinCode,
+        checkedIn: match.checkedIn,
+        checkedInAt: match.checkedInAt,
+      };
     } else {
       toInsert.push({ name, position });
     }
@@ -318,7 +338,7 @@ async function syncGuestCompanions(guestId: string, names: string[]): Promise<Gu
     const { data: inserted, error } = await supabase
       .from("guest_companions")
       .insert(toInsert.map((r) => ({ guest_id: guestId, name: r.name, position: r.position })))
-      .select("id, guest_id, name, checkin_code, position");
+      .select("id, guest_id, name, checkin_code, position, checked_in, checked_in_at");
     if (error) throw error;
     for (const row of inserted as GuestCompanionRow[]) {
       result[row.position] = mapCompanionRow(row);
@@ -337,6 +357,28 @@ async function clearGuestCompanions(guestId: string): Promise<void> {
 
 export class RsvpValidationError extends Error {}
 
+/** Sets a guest's email address on its own — used at the envelope gate, before any RSVP choice is made. */
+export async function setGuestEmail(token: string, email: string): Promise<Guest> {
+  const trimmed = email.trim();
+  if (!EMAIL_RE.test(trimmed)) {
+    throw new RsvpValidationError("Ingresa un correo electrónico válido.");
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase.from("guests").update({ email: trimmed }).eq("token", token).select("*").single();
+  if (error) throw error;
+
+  const companions = await fetchCompanions(data.id);
+  return mapRow(data as GuestRow, companions);
+}
+
+/** Appends to the append-only RSVP submission log that powers the admin activity timeline. */
+async function logRsvpEvent(guestId: string, status: Exclude<RsvpStatus, "pending">, isEdit: boolean): Promise<void> {
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("guest_rsvp_events").insert({ guest_id: guestId, status, is_edit: isEdit });
+  if (error) throw error;
+}
+
 /** Validates against `partySizeAllowed` server-side (never trust a client-sent count) and persists the response. */
 export async function submitRsvp(token: string, input: SubmitRsvpInput): Promise<{ guest: Guest; confirmationSent: boolean }> {
   const guest = await getGuestByToken(token);
@@ -354,6 +396,7 @@ export async function submitRsvp(token: string, input: SubmitRsvpInput): Promise
     throw new RsvpValidationError("Ingresa un correo electrónico válido para recibir la confirmación por correo.");
   }
 
+  const isEdit = guest.rsvpStatus !== "pending";
   const attendingCount = input.status === "yes" ? 1 + companionNames.length : null;
 
   const supabase = createSupabaseAdminClient();
@@ -372,6 +415,8 @@ export async function submitRsvp(token: string, input: SubmitRsvpInput): Promise
 
   const companions =
     input.status === "yes" ? await syncGuestCompanions(guest.id, companionNames) : (await clearGuestCompanions(guest.id), []);
+
+  await logRsvpEvent(guest.id, input.status, isEdit);
 
   const updatedGuest = mapRow(data as GuestRow, companions);
 
@@ -530,6 +575,127 @@ export async function listGuestViews(guestId: string): Promise<GuestViewRow[]> {
   }));
 }
 
+/**
+ * Builds a guest's admin-facing activity timeline (newest first): every invitation view, every
+ * RSVP submission (labeled "confirmó"/"editó" depending on whether they'd already responded before),
+ * and check-ins (guest + each companion) — merged from `guest_views`, `guest_rsvp_events`, and the
+ * `checked_in`/`checked_in_at` columns on `guests`/`guest_companions`.
+ */
+export async function getGuestActivity(guest: Guest): Promise<ActivityEntry[]> {
+  const supabase = createSupabaseAdminClient();
+
+  const [{ data: viewRows, error: viewError }, { data: rsvpRows, error: rsvpError }] = await Promise.all([
+    supabase.from("guest_views").select("viewed_at").eq("guest_id", guest.id),
+    supabase.from("guest_rsvp_events").select("status, is_edit, occurred_at").eq("guest_id", guest.id),
+  ]);
+  if (viewError) throw viewError;
+  if (rsvpError) throw rsvpError;
+
+  const entries: ActivityEntry[] = [];
+
+  for (const row of viewRows as { viewed_at: string }[]) {
+    entries.push({ label: "Vio la invitación", occurredAt: row.viewed_at });
+  }
+
+  for (const row of rsvpRows as { status: RsvpStatus; is_edit: boolean; occurred_at: string }[]) {
+    const status = row.status as Exclude<RsvpStatus, "pending">;
+    let label: string;
+    if (row.is_edit) {
+      label = status === "yes" ? "Editó su respuesta (confirmó asistencia)" : "Editó su respuesta (no podrá asistir)";
+    } else {
+      label = status === "yes" ? "Confirmó su asistencia" : "Indicó que no podrá asistir";
+    }
+    entries.push({ label, occurredAt: row.occurred_at });
+  }
+
+  if (guest.checkedIn && guest.checkedInAt) {
+    entries.push({ label: "Hizo check-in", occurredAt: guest.checkedInAt });
+  }
+
+  for (const companion of guest.companions) {
+    if (companion.checkedIn && companion.checkedInAt) {
+      entries.push({ label: `${companion.name} (acompañante) hizo check-in`, occurredAt: companion.checkedInAt });
+    }
+  }
+
+  return entries.sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
+}
+
+/**
+ * Marks a guest or companion as checked in by their QR check-in code (the `/checkin/{code}` URL
+ * encoded in their PDF QR). Idempotent — scanning an already-checked-in code just reports the
+ * original timestamp back instead of erroring or overwriting it.
+ */
+export async function checkInByCode(code: string): Promise<CheckinResult | null> {
+  const supabase = createSupabaseAdminClient();
+
+  const { data: guestRow, error: guestError } = await supabase
+    .from("guests")
+    .select("id, name, checked_in, checked_in_at")
+    .eq("checkin_code", code)
+    .maybeSingle();
+  if (guestError) throw guestError;
+
+  if (guestRow) {
+    if (guestRow.checked_in) {
+      return {
+        personName: guestRow.name,
+        guestName: guestRow.name,
+        isCompanion: false,
+        alreadyCheckedIn: true,
+        checkedInAt: guestRow.checked_in_at as string,
+      };
+    }
+    const checkedInAt = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from("guests")
+      .update({ checked_in: true, checked_in_at: checkedInAt })
+      .eq("id", guestRow.id);
+    if (updateError) throw updateError;
+    return { personName: guestRow.name, guestName: guestRow.name, isCompanion: false, alreadyCheckedIn: false, checkedInAt };
+  }
+
+  const { data: companionRow, error: companionError } = await supabase
+    .from("guest_companions")
+    .select("id, name, guest_id, checked_in, checked_in_at")
+    .eq("checkin_code", code)
+    .maybeSingle();
+  if (companionError) throw companionError;
+  if (!companionRow) return null;
+
+  const { data: parentGuest, error: parentError } = await supabase
+    .from("guests")
+    .select("name")
+    .eq("id", companionRow.guest_id)
+    .single();
+  if (parentError) throw parentError;
+
+  if (companionRow.checked_in) {
+    return {
+      personName: companionRow.name,
+      guestName: parentGuest.name,
+      isCompanion: true,
+      alreadyCheckedIn: true,
+      checkedInAt: companionRow.checked_in_at as string,
+    };
+  }
+
+  const checkedInAt = new Date().toISOString();
+  const { error: updateError } = await supabase
+    .from("guest_companions")
+    .update({ checked_in: true, checked_in_at: checkedInAt })
+    .eq("id", companionRow.id);
+  if (updateError) throw updateError;
+
+  return {
+    personName: companionRow.name,
+    guestName: parentGuest.name,
+    isCompanion: true,
+    alreadyCheckedIn: false,
+    checkedInAt,
+  };
+}
+
 /** Admin manual override — sets RSVP status directly by guest id, bypassing token lookup. Same validation as the guest-facing form, but email is optional (guests who respond off-platform may have none on file). */
 export async function overrideRsvp(id: string, input: SubmitRsvpInput): Promise<{ guest: Guest; confirmationSent: boolean }> {
   const guest = await getGuestById(id);
@@ -546,6 +712,7 @@ export async function overrideRsvp(id: string, input: SubmitRsvpInput): Promise<
     throw new RsvpValidationError("El correo electrónico no es válido.");
   }
 
+  const isEdit = guest.rsvpStatus !== "pending";
   const attendingCount = input.status === "yes" ? 1 + companionNames.length : null;
 
   const supabase = createSupabaseAdminClient();
@@ -564,6 +731,8 @@ export async function overrideRsvp(id: string, input: SubmitRsvpInput): Promise<
 
   const companions =
     input.status === "yes" ? await syncGuestCompanions(id, companionNames) : (await clearGuestCompanions(id), []);
+
+  await logRsvpEvent(id, input.status, isEdit);
 
   const updatedGuest = mapRow(data as GuestRow, companions);
   // Same as submitRsvp — sent for both "yes" and "no" when an email is on file (optional here,
@@ -631,6 +800,108 @@ export async function getGuestSideBreakdown(): Promise<SideBreakdown[]> {
 export function buildGuestInviteLink(guest: Pick<Guest, "name" | "token" | "whatsappNumber">): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const personalUrl = `${siteUrl}/i/${guest.token}`;
-  const message = `¡Hola ${guest.name}! 💌\n\nTe compartimos tu invitación personal a la boda de José & Cinthia:\n${personalUrl}`;
+  const message = `¡Hola ${guest.name}! Te compartimos tu invitación personal a la boda de José & Cinthia:\n${personalUrl}`;
   return buildWhatsAppLink(guest.whatsappNumber, message);
+}
+
+/** Builds a `wa.me` link to resend a guest's own confirmation PDF/QR (e.g. if they lost it) — points at the guest-facing `/i/[token]/comprobante` re-download route. */
+export function buildGuestConfirmationResendLink(guest: Pick<Guest, "name" | "token" | "whatsappNumber">): string {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const comprobanteUrl = `${siteUrl}/i/${guest.token}/comprobante`;
+  const message = `¡Hola ${guest.name}! Aquí tienes de nuevo tu comprobante con código QR para la boda de José & Cinthia:\n${comprobanteUrl}`;
+  return buildWhatsAppLink(guest.whatsappNumber, message);
+}
+
+/**
+ * Same as `buildGuestConfirmationResendLink`, but for a companion — companions have no phone of
+ * their own, so this still goes out through the primary guest's WhatsApp number, with the message
+ * naming which person's QR it is (the PDF behind the link contains everyone's, including theirs).
+ */
+export function buildCompanionConfirmationResendLink(
+  guest: Pick<Guest, "name" | "token" | "whatsappNumber">,
+  companionName: string,
+): string {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const comprobanteUrl = `${siteUrl}/i/${guest.token}/comprobante`;
+  const message = `¡Hola! Aquí tienes de nuevo el comprobante con el código QR de ${companionName} para la boda de José & Cinthia:\n${comprobanteUrl}`;
+  return buildWhatsAppLink(guest.whatsappNumber, message);
+}
+
+/** Manual check-in toggle for the primary guest — a backup for when the QR scan fails or the door phone is offline. */
+export async function setGuestCheckedIn(id: string, checkedIn: boolean): Promise<void> {
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase
+    .from("guests")
+    .update({ checked_in: checkedIn, checked_in_at: checkedIn ? new Date().toISOString() : null })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/** Same as `setGuestCheckedIn`, for one companion. Returns their `guest_id` so the caller can revalidate the right admin page. */
+export async function setCompanionCheckedIn(companionId: string, checkedIn: boolean): Promise<string> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("guest_companions")
+    .update({ checked_in: checkedIn, checked_in_at: checkedIn ? new Date().toISOString() : null })
+    .eq("id", companionId)
+    .select("guest_id")
+    .single();
+  if (error) throw error;
+  return data.guest_id as string;
+}
+
+/**
+ * Admin-side direct rename of a companion — independent of the name-matching sync that runs when
+ * the guest themselves edits their RSVP (`syncGuestCompanions`). Trade-off: if the guest later
+ * edits their RSVP from a page loaded before this rename, that edit's companion list still has the
+ * old name, and the sync will treat it as a fresh add and lose the just-renamed row's identity.
+ * Acceptable — this is an infrequent admin correction, not a common path.
+ */
+export async function renameCompanion(companionId: string, name: string): Promise<string> {
+  const trimmed = name.trim();
+  if (!trimmed) throw new GuestValidationError("El nombre no puede estar vacío.");
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("guest_companions")
+    .update({ name: trimmed })
+    .eq("id", companionId)
+    .select("guest_id")
+    .single();
+  if (error) throw error;
+  return data.guest_id as string;
+}
+
+/** Admin-side removal of a single companion (e.g. a duplicate or mistaken entry) — also decrements the guest's `rsvp_attending_count` so headcounts stay correct. */
+export async function deleteCompanion(companionId: string): Promise<string> {
+  const supabase = createSupabaseAdminClient();
+
+  const { data: companion, error: fetchError } = await supabase
+    .from("guest_companions")
+    .select("guest_id")
+    .eq("id", companionId)
+    .single();
+  if (fetchError) throw fetchError;
+  const guestId = companion.guest_id as string;
+
+  const { error: deleteError } = await supabase.from("guest_companions").delete().eq("id", companionId);
+  if (deleteError) throw deleteError;
+
+  const { data: guestRow, error: guestError } = await supabase
+    .from("guests")
+    .select("rsvp_attending_count")
+    .eq("id", guestId)
+    .single();
+  if (guestError) throw guestError;
+
+  const currentCount = guestRow.rsvp_attending_count as number | null;
+  if (currentCount && currentCount > 1) {
+    const { error: updateError } = await supabase
+      .from("guests")
+      .update({ rsvp_attending_count: currentCount - 1 })
+      .eq("id", guestId);
+    if (updateError) throw updateError;
+  }
+
+  return guestId;
 }

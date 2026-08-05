@@ -56,6 +56,37 @@
   margin: 10px 0 36px;
 }
 
+.emailGate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(300px, 80vw);
+  margin-bottom: 28px;
+}
+
+.emailInput {
+  composes: formInput from global;
+  width: 100%;
+  text-align: center;
+}
+
+.emailHint {
+  font: 400 10px/1.5 var(--font-label);
+  color: var(--color-taupe);
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.emailError {
+  composes: formError from global;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 11px;
+  padding: 8px 10px;
+  margin: 0;
+}
+
 .envelopeButton {
   all: unset;
   cursor: pointer;

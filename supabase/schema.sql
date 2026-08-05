@@ -150,9 +150,28 @@ create trigger guest_companions_set_updated_at
   before update on guest_companions
   for each row execute function set_updated_at();
 
+-- Migration for door check-in (QR scan at /checkin/[code]) — no-op on a fresh install.
+alter table guests add column if not exists checked_in boolean not null default false;
+alter table guests add column if not exists checked_in_at timestamptz;
+alter table guest_companions add column if not exists checked_in boolean not null default false;
+alter table guest_companions add column if not exists checked_in_at timestamptz;
+
+-- Append-only RSVP submission log, powering the admin "Actividad" timeline (distinguishing a
+-- first confirmation from a later edit). guests.rsvp_status/rsvp_responded_at still hold the
+-- latest state; this only adds history on top.
+create table if not exists guest_rsvp_events (
+  id bigint generated always as identity primary key,
+  guest_id uuid not null references guests (id) on delete cascade,
+  status text not null check (status in ('yes', 'no')),
+  is_edit boolean not null,
+  occurred_at timestamptz not null default now()
+);
+create index if not exists guest_rsvp_events_guest_id_idx on guest_rsvp_events (guest_id);
+
 alter table guests enable row level security;
 alter table guest_views enable row level security;
 alter table guest_companions enable row level security;
+alter table guest_rsvp_events enable row level security;
 -- Intentionally no policies: RLS enabled with zero policies means zero
 -- access from the anon/public client. All reads/writes go through the
 -- service-role key from trusted server code only (lib/supabase/admin.ts),

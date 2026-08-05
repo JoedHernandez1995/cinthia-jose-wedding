@@ -109,7 +109,7 @@ a:hover {
   border-radius: 2px;
 }
 
-/* Shared inline form-validation error style, composed by RsvpSection/RsvpCompanionModal. */
+/* Shared inline form-validation error style, composed by RsvpSection/RsvpCompanionFields. */
 .formError {
   font: 400 13px/1.5 var(--font-label);
   color: #b3423f;
@@ -119,7 +119,7 @@ a:hover {
   padding: 10px 12px;
 }
 
-/* Shared text-input styling, composed by RsvpCompanionModal's select/name inputs. */
+/* Shared text-input styling, composed by RsvpCompanionFields's select/name inputs. */
 .formInput {
   font: 400 14px/1.4 var(--font-label);
   padding: 10px 12px;

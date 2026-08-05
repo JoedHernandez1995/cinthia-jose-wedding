@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { EnvelopeIntro } from "@/components/sections/EnvelopeIntro";
 import { NavBar } from "@/components/sections/NavBar";
 import { HeroSection } from "@/components/sections/HeroSection";
@@ -29,10 +30,12 @@ interface InvitationPageProps {
  * its own copy, styling, and local state — this component only decides
  * ordering and the shared page chrome (envelope overlay + fixed nav).
  */
-export function InvitationPage({ guest }: InvitationPageProps) {
+export function InvitationPage({ guest: initialGuest }: InvitationPageProps) {
+  const [guest, setGuest] = useState(initialGuest);
+
   return (
     <div className={styles.page}>
-      <EnvelopeIntro guest={guest} />
+      <EnvelopeIntro guest={guest} onEmailSaved={(email) => setGuest((g) => ({ ...g, email }))} />
 
       <div className={styles.container}>
         <NavBar guest={guest} />

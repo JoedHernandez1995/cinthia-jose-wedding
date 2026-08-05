@@ -6,5 +6,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  // /checkin is staff-only (door check-in via QR scan) — gated the same way as /admin so a guest
+  // can't check themselves in by opening their own QR out of curiosity.
+  matcher: ["/admin/:path*", "/checkin/:path*"],
 };

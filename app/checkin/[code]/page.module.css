@@ -1,0 +1,62 @@
+.wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--color-bg);
+  font-family: var(--font-label);
+}
+
+.card {
+  width: 100%;
+  max-width: 360px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 32px 28px;
+  text-align: center;
+}
+
+.badge {
+  display: inline-block;
+  font: 600 11px/1.4 var(--font-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 999px;
+  margin-bottom: 18px;
+}
+
+.badgeSuccess {
+  background: #e6f4ea;
+  color: #1e7a34;
+}
+
+.badgeAlready {
+  background: #fdf3e0;
+  color: #9a6b12;
+}
+
+.badgeNotFound {
+  background: #fbeceb;
+  color: #b3423f;
+}
+
+.name {
+  font: 600 20px/1.3 var(--font-label);
+  color: var(--color-ink);
+  margin: 0 0 6px;
+}
+
+.meta {
+  font: 400 13px/1.5 var(--font-label);
+  color: var(--color-muted);
+  margin: 0 0 4px;
+}
+
+.timestamp {
+  font: 400 12px/1.5 var(--font-label);
+  color: var(--color-muted-light);
+  margin: 12px 0 0;
+}

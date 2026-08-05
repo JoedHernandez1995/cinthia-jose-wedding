@@ -64,6 +64,16 @@ There's no WhatsApp Business API integration — sending is admin-assisted:
 - **Inviting a guest**: `/admin/guests` has a "Enviar por WhatsApp" link per row that opens `wa.me` with that guest's personal invitation link pre-filled; the admin taps send.
 - **RSVP notifications**: after a guest submits their RSVP on their personal page, the site auto-opens a `wa.me` link to the wedding planner's number (`plannerWhatsAppNumber` in `config/site.ts`) with a summary pre-filled; the guest taps send. The RSVP itself is always saved to the database first regardless of whether that message gets sent.
 
+### Error tracking (Sentry)
+
+Unhandled errors are caught by themed error boundaries (`app/error.tsx` for the public site, `app/admin/error.tsx` for the admin panel, `app/global-error.tsx` as a last resort) and reported to [Sentry](https://sentry.io) if configured.
+
+1. Create a Sentry project (Next.js platform).
+2. Copy the DSN into `NEXT_PUBLIC_SENTRY_DSN` in `.env.local` (and in Vercel's env settings for production).
+3. Optional, for readable stack traces in Sentry instead of minified ones: create an auth token (sentry.io/settings/account/api/auth-tokens) and set `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` — this uploads source maps on `next build`.
+
+Without `NEXT_PUBLIC_SENTRY_DSN` set, error reporting is a no-op — the error boundaries still show their fallback UI, they just don't send anything anywhere.
+
 ## Known gaps to finish before shipping
 - **No check-in scanner yet**: each confirmation PDF's QR codes encode `/checkin/{code}` URLs, but that route isn't built — scanning one currently 404s. The codes are real and stable (won't need to be re-issued) for whenever a door check-in feature is added.
 - **Missing photos**: `marquee-1`, `marquee-4-b`, `marquee-5-b` had no image uploaded in the original design; they currently render a plain placeholder box. Drop matching files into `public/photos/` (same naming) to fill them.

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { buildGuestInviteLink, getGuestById, listGuestViews } from "@/lib/guests";
+import { buildGuestConfirmationResendLink, buildGuestInviteLink, getGuestActivity, getGuestById } from "@/lib/guests";
 import { EditGuestForm } from "./EditGuestForm";
 import { OverrideRsvpForm } from "./OverrideRsvpForm";
 import styles from "./page.module.css";
@@ -15,7 +15,7 @@ export default async function AdminGuestDetailPage({ params }: { params: { id: s
   const guest = await getGuestById(params.id);
   if (!guest) notFound();
 
-  const views = await listGuestViews(guest.id);
+  const activity = await getGuestActivity(guest);
   const inviteLink = buildGuestInviteLink(guest);
 
   return (
@@ -71,8 +71,35 @@ export default async function AdminGuestDetailPage({ params }: { params: { id: s
               {guest.rsvpStatus === "yes" && `Confirmado · ${guest.rsvpAttendingCount} asistente(s)`}
               {guest.rsvpStatus === "no" && "No asistirá"}
             </dd>
+            <dt>Check-in</dt>
+            <dd>{guest.checkedIn ? `Sí · ${formatDate(guest.checkedInAt)}` : "No ha llegado"}</dd>
             <dt>Acompañantes confirmados</dt>
-            <dd>{guest.companionNames.length > 0 ? guest.companionNames.join(", ") : "—"}</dd>
+            <dd>
+              {guest.companions.length > 0 ? (
+                <ul className={styles.companionList}>
+                  {guest.companions.map((companion) => (
+                    <li key={companion.id} className={styles.companionRow}>
+                      <span>
+                        <span className={styles.companionName}>{companion.name}</span>
+                        <br />
+                        <span className={styles.companionOf}>Acompañante de {guest.name}</span>
+                      </span>
+                      <span>
+                        <span className={styles.companionCode} title="Código de check-in">
+                          {companion.checkinCode}
+                        </span>
+                        <br />
+                        <span className={styles.companionOf}>
+                          {companion.checkedIn ? `Check-in · ${formatDate(companion.checkedInAt)}` : "No ha llegado"}
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                "—"
+              )}
+            </dd>
             <dt>Última respuesta</dt>
             <dd>{formatDate(guest.rsvpRespondedAt)}</dd>
             <dt>Comprobante PDF</dt>
@@ -80,18 +107,28 @@ export default async function AdminGuestDetailPage({ params }: { params: { id: s
               <a href={`/admin/guests/${guest.id}/pdf`} target="_blank" rel="noreferrer">
                 Ver / descargar
               </a>
+              {guest.rsvpStatus === "yes" && (
+                <>
+                  {" · "}
+                  <a href={buildGuestConfirmationResendLink(guest)} target="_blank" rel="noreferrer">
+                    Reenviar por WhatsApp
+                  </a>
+                </>
+              )}
             </dd>
           </dl>
         </section>
 
         <section className={styles.panel}>
-          <h2 className={styles.panelHeading}>Historial de vistas ({guest.viewCount})</h2>
-          {views.length === 0 ? (
-            <p className={styles.muted}>Aún no ha abierto su invitación.</p>
+          <h2 className={styles.panelHeading}>Actividad</h2>
+          {activity.length === 0 ? (
+            <p className={styles.muted}>Aún no hay actividad registrada.</p>
           ) : (
             <ul className={styles.viewList}>
-              {views.map((v) => (
-                <li key={v.id}>{formatDate(v.viewedAt)}</li>
+              {activity.map((entry, i) => (
+                <li key={i}>
+                  {entry.label} el {formatDate(entry.occurredAt)}
+                </li>
               ))}
             </ul>
           )}

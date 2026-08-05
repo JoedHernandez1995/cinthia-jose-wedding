@@ -1,4 +1,4 @@
-import { buildGuestInviteLink, listGuests } from "@/lib/guests";
+import { buildCompanionConfirmationResendLink, buildGuestConfirmationResendLink, buildGuestInviteLink, listGuests } from "@/lib/guests";
 import { UploadCsvForm } from "./UploadCsvForm";
 import { AddGuestForm } from "./AddGuestForm";
 import { GuestTable, type GuestRowView } from "./GuestTable";
@@ -6,7 +6,12 @@ import styles from "./page.module.css";
 
 export default async function AdminGuestsPage() {
   const guests = await listGuests();
-  const rows: GuestRowView[] = guests.map((g) => ({ ...g, inviteLink: buildGuestInviteLink(g) }));
+  const rows: GuestRowView[] = guests.map((g) => ({
+    ...g,
+    inviteLink: buildGuestInviteLink(g),
+    resendLink: buildGuestConfirmationResendLink(g),
+    companions: g.companions.map((c) => ({ ...c, resendLink: buildCompanionConfirmationResendLink(g, c.name) })),
+  }));
 
   return (
     <div>

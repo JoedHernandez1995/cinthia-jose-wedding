@@ -7,11 +7,15 @@ import {
   GuestValidationError,
   RsvpValidationError,
   createGuest,
+  deleteCompanion,
   deleteGuest,
   markInviteSent,
   overrideRsvp,
   parseGuestCsvRows,
   regenerateToken,
+  renameCompanion,
+  setCompanionCheckedIn,
+  setGuestCheckedIn,
   updateGuest,
   upsertGuestsFromCsv,
 } from "@/lib/guests";
@@ -130,6 +134,51 @@ export async function regenerateTokenAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (id) await regenerateToken(id);
   revalidatePath("/admin/guests");
+}
+
+export async function toggleGuestCheckedInAction(formData: FormData): Promise<void> {
+  const id = String(formData.get("id") ?? "");
+  const checkedIn = String(formData.get("checkedIn")) === "true";
+  if (!id) return;
+  await setGuestCheckedIn(id, checkedIn);
+  revalidatePath("/admin/guests");
+  revalidatePath(`/admin/guests/${id}`);
+}
+
+export async function toggleCompanionCheckedInAction(formData: FormData): Promise<void> {
+  const companionId = String(formData.get("companionId") ?? "");
+  const checkedIn = String(formData.get("checkedIn")) === "true";
+  if (!companionId) return;
+  const guestId = await setCompanionCheckedIn(companionId, checkedIn);
+  revalidatePath("/admin/guests");
+  revalidatePath(`/admin/guests/${guestId}`);
+}
+
+export async function renameCompanionAction(formData: FormData): Promise<ActionResult> {
+  const companionId = String(formData.get("companionId") ?? "");
+  const name = String(formData.get("name") ?? "");
+  if (!companionId) return { ok: false, message: "Falta el acompañante." };
+
+  try {
+    const guestId = await renameCompanion(companionId, name);
+    revalidatePath("/admin/guests");
+    revalidatePath(`/admin/guests/${guestId}`);
+  } catch (error) {
+    if (error instanceof GuestValidationError) {
+      return { ok: false, message: error.message };
+    }
+    throw error;
+  }
+
+  return { ok: true, message: "Nombre actualizado." };
+}
+
+export async function deleteCompanionAction(formData: FormData): Promise<void> {
+  const companionId = String(formData.get("companionId") ?? "");
+  if (!companionId) return;
+  const guestId = await deleteCompanion(companionId);
+  revalidatePath("/admin/guests");
+  revalidatePath(`/admin/guests/${guestId}`);
 }
 
 export async function overrideRsvpAction(_prevState: ActionResult | null, formData: FormData): Promise<ActionResult> {

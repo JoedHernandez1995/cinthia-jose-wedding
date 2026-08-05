@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Reveal } from "@/components/ui/Reveal";
 import { GoldDivider } from "@/components/ui/GoldDivider";
 import { GoldButtonLink } from "@/components/ui/GoldButtonLink";
-import { RsvpCompanionModal } from "@/components/sections/RsvpCompanionModal";
+import { RsvpCompanionFields } from "@/components/sections/RsvpCompanionFields";
 import { faqContact, plannerWhatsAppNumber, sectionIds, wedding, whatsappMessages } from "@/config/site";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { submitRsvpAction } from "@/app/i/[token]/actions";
@@ -18,18 +18,23 @@ interface RsvpSectionProps {
   guest: GuestViewModel;
 }
 
-/** Guest's personal page — real form backed by the database, editable indefinitely. */
+/**
+ * Guest's personal page — real form backed by the database, editable indefinitely. Email is
+ * already on file by the time this renders (collected at the envelope gate), so "No podré
+ * asistir" submits immediately and "Sí, asistiré" only needs an extra step when the party is
+ * more than one person (to collect companion names).
+ */
 export function RsvpSection({ guest }: RsvpSectionProps) {
   const [status, setStatus] = useState<RsvpStatus>(guest.rsvpStatus);
   const [companionNames, setCompanionNames] = useState(guest.companionNames);
-  const [email, setEmail] = useState(guest.email);
   const [confirmationSent, setConfirmationSent] = useState(true);
-  const [mode, setMode] = useState<"choosing" | "confirmed">(guest.rsvpStatus === "pending" ? "choosing" : "confirmed");
-  const [modalIntent, setModalIntent] = useState<"yes" | "no">("yes");
-  const [modalOpen, setModalOpen] = useState(false);
+  const [mode, setMode] = useState<"choosing" | "collecting" | "confirmed">(
+    guest.rsvpStatus === "pending" ? "choosing" : "confirmed",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
 
+  const maxCompanions = guest.partySizeAllowed - 1;
   const pastDeadline = isPastDeadline();
   const neverResponded = status === "pending";
   // After the deadline, self-serve editing closes — both for guests who already answered and for
@@ -38,13 +43,13 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
   const showClosedContact = pastDeadline && (mode === "confirmed" || (mode === "choosing" && neverResponded));
   const plannerLastMinuteLink = buildWhatsAppLink(plannerWhatsAppNumber, whatsappMessages.rsvpLastMinute(guest.name));
 
-  async function performSubmit(nextStatus: Exclude<RsvpStatus, "pending">, nextEmail: string, nextCompanionNames: string[]) {
+  async function performSubmit(nextStatus: Exclude<RsvpStatus, "pending">, nextCompanionNames: string[]) {
     setSubmitting(true);
     setErrorMessage(undefined);
 
     const result = await submitRsvpAction(guest.token, {
       status: nextStatus,
-      email: nextEmail || undefined,
+      email: guest.email ?? undefined,
       companionNames: nextCompanionNames,
     });
 
@@ -57,10 +62,8 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
 
     setStatus(nextStatus);
     setCompanionNames(result.companionNames);
-    setEmail(nextEmail || email);
     setConfirmationSent(result.confirmationSent);
     setMode("confirmed");
-    setModalOpen(false);
 
     // Only treat displayName as a real "family label" when it's distinct from the guest's own
     // name — a lone guest with no group display name set would otherwise read as "Jane Doe de la
@@ -74,13 +77,16 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
   }
 
   function handleYesClick() {
-    setModalIntent("yes");
-    setModalOpen(true);
+    if (maxCompanions > 0) {
+      setErrorMessage(undefined);
+      setMode("collecting");
+    } else {
+      performSubmit("yes", []);
+    }
   }
 
   function handleNoClick() {
-    setModalIntent("no");
-    setModalOpen(true);
+    performSubmit("no", []);
   }
 
   return (
@@ -116,7 +122,7 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
         </p>
       )}
 
-      {errorMessage && <p className={styles.error}>{errorMessage}</p>}
+      {errorMessage && mode !== "collecting" && <p className={styles.error}>{errorMessage}</p>}
 
       {showChoiceButtons ? (
         <div className={styles.buttonList}>
@@ -132,6 +138,18 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
             NO PODRÉ ASISTIR
           </button>
         </div>
+      ) : mode === "collecting" ? (
+        <RsvpCompanionFields
+          partySizeAllowed={guest.partySizeAllowed}
+          initialCompanionNames={companionNames}
+          submitting={submitting}
+          errorMessage={errorMessage}
+          onCancel={() => {
+            setErrorMessage(undefined);
+            setMode("choosing");
+          }}
+          onConfirm={(names) => performSubmit("yes", names)}
+        />
       ) : showClosedContact ? (
         <div className={styles.closedWindow}>
           {!neverResponded && (
@@ -150,19 +168,6 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
             ? "¿Cambiaron de planes? Todavía pueden editar su respuesta"
             : "¿Cambiaste de planes? Todavía puedes editar tu respuesta"}
         </button>
-      )}
-
-      {modalOpen && (
-        <RsvpCompanionModal
-          intent={modalIntent}
-          partySizeAllowed={guest.partySizeAllowed}
-          initialEmail={email}
-          initialCompanionNames={companionNames}
-          submitting={submitting}
-          errorMessage={errorMessage}
-          onCancel={() => setModalOpen(false)}
-          onConfirm={(nextEmail, names) => performSubmit(modalIntent, nextEmail, names)}
-        />
       )}
     </RsvpShell>
   );
