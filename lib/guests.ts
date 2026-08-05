@@ -813,11 +813,22 @@ export function buildGuestInviteLink(
   return buildWhatsAppLink(guest.whatsappNumber, message);
 }
 
-/** Builds a `wa.me` link to resend a guest's own confirmation PDF/QR (e.g. if they lost it) — points at the guest-facing `/i/[token]/comprobante` re-download route. */
-export function buildGuestConfirmationResendLink(guest: Pick<Guest, "name" | "token" | "whatsappNumber">): string {
+/**
+ * Builds a `wa.me` link to resend a guest's own confirmation PDF/QR (e.g. if they lost it) —
+ * points at the guest-facing `/i/[token]/comprobante` re-download route. The PDF behind that link
+ * contains every QR in the party (guest + companions), so the same displayName/plural rule as
+ * `buildGuestInviteLink` applies: greet by family display name and go plural only when there's
+ * both a display name and room for others.
+ */
+export function buildGuestConfirmationResendLink(
+  guest: Pick<Guest, "name" | "displayName" | "token" | "whatsappNumber" | "partySizeAllowed">,
+): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const comprobanteUrl = `${siteUrl}/i/${guest.token}/comprobante`;
-  const message = `¡Hola ${guest.name}! Aquí tienes de nuevo tu comprobante con código QR para la boda de José & Cinthia:\n${comprobanteUrl}`;
+  const greetingName = guest.displayName || guest.name;
+  const isPlural = Boolean(guest.displayName) && guest.partySizeAllowed > 1;
+  const verbPhrase = isPlural ? "tienen de nuevo su comprobante" : "tienes de nuevo tu comprobante";
+  const message = `¡Hola ${greetingName}! Aquí ${verbPhrase} con código QR para la boda de José & Cinthia:\n${comprobanteUrl}`;
   return buildWhatsAppLink(guest.whatsappNumber, message);
 }
 
@@ -825,14 +836,18 @@ export function buildGuestConfirmationResendLink(guest: Pick<Guest, "name" | "to
  * Same as `buildGuestConfirmationResendLink`, but for a companion — companions have no phone of
  * their own, so this still goes out through the primary guest's WhatsApp number, with the message
  * naming which person's QR it is (the PDF behind the link contains everyone's, including theirs).
+ * Same displayName/plural rule as the other two guest-facing WhatsApp messages.
  */
 export function buildCompanionConfirmationResendLink(
-  guest: Pick<Guest, "name" | "token" | "whatsappNumber">,
+  guest: Pick<Guest, "name" | "displayName" | "token" | "whatsappNumber" | "partySizeAllowed">,
   companionName: string,
 ): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const comprobanteUrl = `${siteUrl}/i/${guest.token}/comprobante`;
-  const message = `¡Hola! Aquí tienes de nuevo el comprobante con el código QR de ${companionName} para la boda de José & Cinthia:\n${comprobanteUrl}`;
+  const greetingName = guest.displayName || guest.name;
+  const isPlural = Boolean(guest.displayName) && guest.partySizeAllowed > 1;
+  const verbPhrase = isPlural ? "tienen de nuevo" : "tienes de nuevo";
+  const message = `¡Hola ${greetingName}! Aquí ${verbPhrase} el comprobante con el código QR de ${companionName} para la boda de José & Cinthia:\n${comprobanteUrl}`;
   return buildWhatsAppLink(guest.whatsappNumber, message);
 }
 
