@@ -43,5 +43,13 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // A phone's browser (or an intermediate CDN) will happily cache a GET response for an identical
+  // URL — and every scan of the same QR code is an identical URL. Without this, a second scan of
+  // an already-checked-in code can show the first scan's cached "success" page without the request
+  // ever reaching the server to report "ya registrado".
+  if (path.startsWith("/checkin")) {
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  }
+
   return response;
 }
