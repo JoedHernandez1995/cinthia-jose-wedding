@@ -809,7 +809,7 @@ export function buildGuestInviteLink(
     ? "Queremos compartir con ustedes algo muy especial: su invitación a nuestra boda. Nos hará mucha ilusión tenerlos con nosotros en este día tan importante."
     : "Queremos compartir contigo algo muy especial: tu invitación a nuestra boda. Nos hará mucha ilusión tenerte con nosotros en este día tan importante.";
 
-  const message = `${greetingName} 💛\n\n${body}\n\nJosé & Cinthia\n\n${personalUrl}`;
+  const message = `${greetingName} 🤍\n\n${body}\n\nJosé & Cinthia\n\n${personalUrl}`;
   return buildWhatsAppLink(guest.whatsappNumber, message);
 }
 
