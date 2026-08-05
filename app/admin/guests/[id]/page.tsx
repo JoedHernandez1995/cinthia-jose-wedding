@@ -1,13 +1,9 @@
 import { notFound } from "next/navigation";
 import { buildGuestConfirmationResendLink, buildGuestInviteLink, getGuestActivity, getGuestById } from "@/lib/guests";
+import { formatDateTime as formatDate } from "@/lib/formatDate";
 import { EditGuestForm } from "./EditGuestForm";
 import { OverrideRsvpForm } from "./OverrideRsvpForm";
 import styles from "./page.module.css";
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("es-HN", { dateStyle: "medium", timeStyle: "short" });
-}
 
 export const dynamic = "force-dynamic";
 

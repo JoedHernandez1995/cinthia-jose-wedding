@@ -1,9 +1,6 @@
 import { checkInByCode } from "@/lib/guests";
+import { formatDateTime as formatDate } from "@/lib/formatDate";
 import styles from "./page.module.css";
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("es-HN", { dateStyle: "medium", timeStyle: "short" });
-}
 
 // Always hit the database — this is a live door check-in action, never cached.
 export const dynamic = "force-dynamic";

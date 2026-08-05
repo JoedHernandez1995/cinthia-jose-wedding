@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Guest, GuestCompanion } from "@/types/guest";
 import { useAdminToast } from "@/components/admin/Toast";
 import { useAdminConfirm } from "@/components/admin/ConfirmDialog";
+import { formatDateTime as formatDate } from "@/lib/formatDate";
 import {
   deleteCompanionAction,
   deleteGuestAction,
@@ -30,11 +31,6 @@ export interface GuestRowView extends Omit<Guest, "companions"> {
 
 type StatusFilter = "all" | "pending" | "yes" | "no" | "not_sent";
 type SideFilter = "all" | "novio" | "novia" | "sin_definir";
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("es-HN", { dateStyle: "medium", timeStyle: "short" });
-}
 
 export function GuestTable({ guests }: { guests: GuestRowView[] }) {
   const router = useRouter();
