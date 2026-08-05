@@ -261,10 +261,54 @@ begin
 end;
 $$;
 
+-- General-purpose rate limiting, backed by Postgres rather than an external store (Redis/Upstash)
+-- — this app runs on serverless functions with no shared memory between invocations, but already
+-- has a Postgres connection on every request, so a fixed-window counter table here is correct
+-- across every instance with no new infrastructure. Traffic is low enough (one wedding, not a
+-- multi-tenant SaaS) that row-level locking on a single small table is not a bottleneck.
+create table if not exists rate_limits (
+  key text primary key,
+  count int not null default 1,
+  window_start timestamptz not null default now()
+);
+
+-- Atomically increments the counter for `p_key` within a fixed `p_window_seconds` window
+-- (resetting it if the window has elapsed) and reports whether the caller is still under
+-- `p_max`. The `on conflict` upsert takes a row lock, so concurrent calls for the same key
+-- serialize correctly instead of racing on a read-then-write check. Also opportunistically (1% of
+-- calls) prunes stale rows so this table doesn't grow unbounded from one-off IPs/tokens that never
+-- come back — cheap enough at this app's request volume to not need a separate scheduled job.
+create or replace function check_rate_limit(p_key text, p_max int, p_window_seconds int)
+returns boolean language plpgsql as $$
+declare
+  v_count int;
+begin
+  insert into rate_limits (key, count, window_start)
+  values (p_key, 1, now())
+  on conflict (key) do update set
+    count = case
+      when rate_limits.window_start < now() - (p_window_seconds || ' seconds')::interval then 1
+      else rate_limits.count + 1
+    end,
+    window_start = case
+      when rate_limits.window_start < now() - (p_window_seconds || ' seconds')::interval then now()
+      else rate_limits.window_start
+    end
+  returning count into v_count;
+
+  if random() < 0.01 then
+    delete from rate_limits where window_start < now() - interval '1 day';
+  end if;
+
+  return v_count <= p_max;
+end;
+$$;
+
 alter table guests enable row level security;
 alter table guest_views enable row level security;
 alter table guest_companions enable row level security;
 alter table guest_rsvp_events enable row level security;
+alter table rate_limits enable row level security;
 -- Intentionally no policies: RLS enabled with zero policies means zero
 -- access from the anon/public client. All reads/writes go through the
 -- service-role key from trusted server code only (lib/supabase/admin.ts),
