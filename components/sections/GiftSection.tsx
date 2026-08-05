@@ -29,7 +29,12 @@ export function GiftSection({ guest }: GiftSectionProps) {
         <p className={styles.intro}>{giftIntroCopy}</p>
         <div className={styles.accountList}>
           {giftAccounts.map((account, index) => (
-            <div key={account.label} className={styles.accountCard}>
+            // `account.label` isn't unique — giftAccountsLocal has two accounts labeled "CUENTA EN
+            // LEMPIRAS · HONDURAS" (BAC and FICOHSA) and two "CUENTA EN DÓLARES · HONDURAS".
+            // Duplicate keys made React's reconciliation misbehave across re-renders (e.g. toggling
+            // guest location back and forth in the debug panel), showing stale/duplicated cards.
+            // `copyText` (the actual account number/handle) is always unique per account.
+            <div key={`${account.label}-${account.copyText}`} className={styles.accountCard}>
               <div className={styles.accountHeader}>
                 <div className={styles.accountLabel}>{account.label}</div>
                 <button onClick={() => copy(index, account.copyText)} className={styles.copyButton}>
