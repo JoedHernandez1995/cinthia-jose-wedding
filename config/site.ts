@@ -73,8 +73,8 @@ export const faqContact = {
 
 // Placeholder Pinterest boards — swap for curated boards if desired.
 export const pinterestLinks = {
-  men: "https://www.pinterest.com/search/pins/?q=traje%20negro%20boda%20elegante",
-  women: "https://www.pinterest.com/search/pins/?q=vestido%20largo%20negro%20gala",
+  men: "https://pin.it/6Pnbe2NMp",
+  women: "https://pin.it/4c0t5axqI",
 };
 
 // Placeholder entries — replace name/description/address/phone/link with the real recommendations
@@ -111,6 +111,9 @@ export const recommendationCategories: RecommendationCategory[] = [
         mapsLink: "https://maps.app.goo.gl/WmRBHj9nf3oVp32v5",
         phone: "50422296900",
         link: "https://florenciaplazahotel.com/",
+      },
+      {
+        name: "Holiday Inn Express Tegucigalpa",
       }
     ],
   },
