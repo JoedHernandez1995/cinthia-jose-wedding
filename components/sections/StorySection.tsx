@@ -6,7 +6,7 @@ import styles from "./StorySection.module.css";
 
 const storyParagraphs = [
   "Hace 11 años, nuestra historia comenzó en la universidad, dentro de un grupo de amigos. Con el tiempo, esas conversaciones fueron encontrando un espacio solo para nosotros dos, y desde entonces siempre nos hemos elegido el uno al otro, una y otra vez.",
-  "En la primavera de 2025, viajamos juntos a Nueva York. Una tarde, en Cornelia Street —una calle con un significado muy especial para nosotros— entre risas y nervios, nos comprometimos para siempre.",
+  "En la primavera de 2025, viajamos juntos a Nueva York. Una tarde, en Cornelia Street, una calle con un significado muy especial para nosotros, entre risas y nervios, nos comprometimos para siempre.",
   "Ahora, rodeados de las personas que más amamos, no podemos esperar a celebrar el comienzo de nuestro próximo capítulo juntos.",
 ];
 
