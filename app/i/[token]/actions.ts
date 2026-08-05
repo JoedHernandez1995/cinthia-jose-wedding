@@ -1,7 +1,8 @@
 "use server";
 
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { RsvpValidationError, setGuestEmail, submitRsvp } from "@/lib/guests";
+import { RsvpValidationError, getGuestByToken, recordGuestView, setGuestEmail, submitRsvp } from "@/lib/guests";
 import type { SubmitRsvpInput } from "@/types/guest";
 
 export type SubmitRsvpResult =
@@ -25,6 +26,19 @@ export async function submitRsvpAction(token: string, input: SubmitRsvpInput): P
     }
     throw error;
   }
+}
+
+/**
+ * Records a guest's invitation view — called once the guest actually clears the envelope gate
+ * (from `EnvelopeIntro`'s open handler), not on page load. Loading `/i/[token]` doesn't imply the
+ * guest has seen the invitation (link-preview bots, a forwarded link that was never opened, etc.);
+ * opening the envelope is a real signal they did.
+ */
+export async function recordViewAction(token: string): Promise<void> {
+  const guest = await getGuestByToken(token);
+  if (!guest) return;
+  const userAgent = headers().get("user-agent");
+  await recordGuestView(guest.id, userAgent);
 }
 
 export type SetGuestEmailResult = { ok: true } | { ok: false; error: string };

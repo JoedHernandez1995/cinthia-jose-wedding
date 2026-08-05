@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { coupleNames } from "@/config/site";
 import { useEnvelopeAnimation } from "@/hooks/useEnvelopeAnimation";
-import { setGuestEmailAction } from "@/app/i/[token]/actions";
+import { recordViewAction, setGuestEmailAction } from "@/app/i/[token]/actions";
 import type { GuestViewModel } from "@/types/guest";
 import styles from "./EnvelopeIntro.module.css";
 
@@ -34,6 +34,7 @@ export function EnvelopeIntro({ guest, onEmailSaved }: EnvelopeIntroProps) {
 
   async function handleOpenClick() {
     if (!needsEmail) {
+      void recordViewAction(guest.token).catch(() => {});
       open();
       return;
     }
@@ -55,6 +56,7 @@ export function EnvelopeIntro({ guest, onEmailSaved }: EnvelopeIntroProps) {
     }
 
     onEmailSaved(trimmed);
+    void recordViewAction(guest.token);
     open();
   }
 
