@@ -114,6 +114,17 @@ export const recommendationCategories: RecommendationCategory[] = [
       },
       {
         name: "Holiday Inn Express Tegucigalpa",
+        description: "A 15 minutos de Hacienda El Trapiche y cerca de Mall Multiplaza y Lomas del Mayab. Facil acceso y ambiente relajado.",
+        mapsLink: "https://www.google.com/maps?q=Holiday+Inn+Express,Colonia+Lomas+del+Mayab,Tegucigalpa,Honduras,11101",
+        phone: "50422753400",
+        link: "https://www.ihg.com/holidayinnexpress/hotels/us/en/tegucigalpa/tguex/hoteldetail",
+      },
+      {
+        name: "Hyatt Place",
+        description: "A 20 minutos de Hacienda El Trapiche. Excelente desayuno. Ubicado en una de las mejores zonas con vida nocturna de Tegucigalpa. Recomendado para invitados que deseen hospedarse en un hotel de lujo y disfrutar de una experiencia completa.",
+        mapsLink: "https://www.google.com/maps/place/Hyatt+Place+Tegucigalpa/data=!4m2!3m1!1s0x0:0xc877d44ab568cfc1?sa=X&ved=1t:2428&ictx=111",
+        phone: "50422296900",
+        link: "https://www.hyatt.com/hyatt-place/en-US/tguzt-hyatt-place-tegucigalpa"
       }
     ],
   },
@@ -127,10 +138,19 @@ export const recommendationCategories: RecommendationCategory[] = [
         link: "https://www.instagram.com/oneybeautystudio?igsh=MXQydWt4cm8yeWswcg==",
       },
       {
-        name: "I Love Makeup Studio",
-        phone: "+50431835161",
-        link: "https://www.instagram.com/ilovemakeupbeautystudio?igsh=MW5rcW93M3R5eGlpNQ==",
+        name: "MCBSTUDIO",
+        phone: "+50433909044",
+        link: "https://www.instagram.com/mcbstudio?igsh=MTFveWJ4YTFxMmg5cA==",
       },
+      {
+        name: "Monique pineda Studio",
+        phone: "+50489137279",
+        link: "https://www.bymoniquepineda.com/services-4?fbclid=PAdGRleATgatRwZG9mAmV4dG4DYWVtAjExAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpyxhR8TnjrgGR3c-OscgWg4dp7hDQQkAhDpUxt6R-Qi2wLfP8DZX8Mhbh2H5_aem_RkL_LoNQEOXLtSV64ovxDw&utm_source=ig&utm_medium=social&utm_content=link_in_bio",
+      },
+      {
+        name: "Diana Hernandez Makeup Artist",
+        link: "https://www.instagram.com/dianahmakeup?igsh=MWtmZWx4NnFxY2Vscw==",
+      }
     ],
   },
   {
