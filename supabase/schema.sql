@@ -168,6 +168,99 @@ create table if not exists guest_rsvp_events (
 );
 create index if not exists guest_rsvp_events_guest_id_idx on guest_rsvp_events (guest_id);
 
+-- Backstop for the party-size/attending-count invariant: enforced at the DB level so a race
+-- between an admin lowering `party_size_allowed` and a guest's RSVP raising `rsvp_attending_count`
+-- can never leave the row in an inconsistent state, regardless of which write wins the race.
+alter table guests drop constraint if exists guests_attending_count_check;
+alter table guests add constraint guests_attending_count_check
+  check (rsvp_attending_count is null or rsvp_attending_count <= party_size_allowed);
+
+-- Defense-in-depth against duplicate companion rows under concurrent RSVP edits (the
+-- `apply_rsvp` function below is the primary fix — this catches anything that slips past it).
+-- If this fails to create because duplicate (guest_id, name) rows already exist from before this
+-- migration, de-duplicate `guest_companions` manually first, then re-run.
+create unique index if not exists guest_companions_guest_name_idx
+  on guest_companions (guest_id, lower(trim(name)));
+
+-- Atomically applies an RSVP (guest-facing submit or admin override): locks the guest row for the
+-- duration of the transaction so two concurrent submissions for the same guest serialize instead
+-- of racing (the previous implementation read the guest, validated, then wrote in separate round
+-- trips — a classic TOCTOU race). Also enforces a short resubmission cooldown here, atomically,
+-- so a scripted client hammering one guest's token can't trigger repeated confirmation
+-- emails/PDFs (each RSVP submit sends one) faster than a real person could plausibly resubmit.
+create or replace function apply_rsvp(
+  p_guest_id uuid,
+  p_status text,
+  p_email text,
+  p_companion_names text[],
+  p_bypass_cooldown boolean default false
+) returns void language plpgsql as $$
+declare
+  v_guest guests%rowtype;
+  v_max_companions int;
+  v_attending_count int;
+  v_is_edit boolean;
+  v_name text;
+  v_position int := 0;
+  v_existing_id uuid;
+begin
+  select * into v_guest from guests where id = p_guest_id for update;
+  if not found then
+    raise exception 'guest_not_found';
+  end if;
+
+  if not p_bypass_cooldown and v_guest.rsvp_responded_at is not null
+     and now() - v_guest.rsvp_responded_at < interval '15 seconds' then
+    raise exception 'rate_limited';
+  end if;
+
+  if p_status = 'yes' then
+    v_max_companions := v_guest.party_size_allowed - 1;
+    if coalesce(array_length(p_companion_names, 1), 0) > v_max_companions then
+      raise exception 'too_many_companions';
+    end if;
+    v_attending_count := 1 + coalesce(array_length(p_companion_names, 1), 0);
+  else
+    v_attending_count := null;
+  end if;
+
+  v_is_edit := v_guest.rsvp_status <> 'pending';
+
+  update guests set
+    rsvp_status = p_status,
+    rsvp_attending_count = v_attending_count,
+    email = coalesce(nullif(p_email, ''), v_guest.email),
+    rsvp_responded_at = now()
+  where id = p_guest_id;
+
+  if p_status = 'yes' then
+    delete from guest_companions gc
+    where gc.guest_id = p_guest_id
+      and not exists (
+        select 1 from unnest(p_companion_names) as n(name)
+        where lower(trim(n.name)) = lower(trim(gc.name))
+      );
+
+    foreach v_name in array p_companion_names loop
+      select id into v_existing_id from guest_companions
+      where guest_id = p_guest_id and lower(trim(name)) = lower(trim(v_name))
+      limit 1;
+
+      if v_existing_id is not null then
+        update guest_companions set name = v_name, position = v_position where id = v_existing_id;
+      else
+        insert into guest_companions (guest_id, name, position) values (p_guest_id, v_name, v_position);
+      end if;
+      v_position := v_position + 1;
+    end loop;
+  else
+    delete from guest_companions where guest_id = p_guest_id;
+  end if;
+
+  insert into guest_rsvp_events (guest_id, status, is_edit) values (p_guest_id, p_status, v_is_edit);
+end;
+$$;
+
 alter table guests enable row level security;
 alter table guest_views enable row level security;
 alter table guest_companions enable row level security;

@@ -204,6 +204,11 @@ export async function createGuest(input: GuestCsvRow): Promise<Guest> {
   return mapRow(data as GuestRow, []);
 }
 
+/** Postgres check_violation — the DB-level backstop (`guests_attending_count_check` in `supabase/schema.sql`) for the same invariant this function pre-checks in JS. Catches the race the pre-check can't: a guest's RSVP raising `rsvp_attending_count` between this function's read and its write. */
+function isAttendingCountCheckViolation(error: { code?: string; message?: string }): boolean {
+  return error.code === "23514" && (error.message ?? "").includes("guests_attending_count_check");
+}
+
 export async function updateGuest(id: string, input: GuestCsvRow): Promise<Guest> {
   const existing = await getGuestById(id);
   if (!existing) throw new GuestValidationError("Invitado no encontrado.");
@@ -232,6 +237,11 @@ export async function updateGuest(id: string, input: GuestCsvRow): Promise<Guest
   if (error) {
     if (isDuplicateKeyError(error)) {
       throw new DuplicateGuestError(`Ya existe otro invitado con el nombre y número "${input.name}".`);
+    }
+    if (isAttendingCountCheckViolation(error)) {
+      throw new GuestValidationError(
+        `No puedes bajar a ${input.partySizeAllowed} persona(s): ${existing.name} confirmó más asistentes justo ahora. Corrige primero su RSVP en "Corrección manual" antes de reducir el límite.`,
+      );
     }
     throw error;
   }
@@ -287,74 +297,6 @@ export async function recordGuestView(guestId: string, userAgent: string | null)
   if (error) throw error;
 }
 
-/**
- * Reconciles a guest's companion rows with a new name list, matched by
- * normalized (trim+lowercase) name so an unchanged companion keeps their
- * `id`/`checkinCode` across edits. Trade-off: fixing a typo in a companion's
- * name on a later edit is treated as remove+add (that person's QR code
- * regenerates) rather than persisting through a rename — simpler than
- * threading stable ids through the RSVP modal's plain `string[]`, which has
- * no other reason to need them.
- */
-async function syncGuestCompanions(guestId: string, names: string[]): Promise<GuestCompanion[]> {
-  const supabase = createSupabaseAdminClient();
-  const existing = await fetchCompanions(guestId);
-  const normalize = (s: string) => s.trim().toLowerCase();
-
-  const claimed = new Set<string>();
-  const result: (GuestCompanion | undefined)[] = [];
-  const toInsert: { name: string; position: number }[] = [];
-
-  names.forEach((name, position) => {
-    const match = existing.find((e) => !claimed.has(e.id) && normalize(e.name) === normalize(name));
-    if (match) {
-      claimed.add(match.id);
-      result[position] = {
-        id: match.id,
-        name,
-        checkinCode: match.checkinCode,
-        checkedIn: match.checkedIn,
-        checkedInAt: match.checkedInAt,
-      };
-    } else {
-      toInsert.push({ name, position });
-    }
-  });
-
-  const idsToDelete = existing.filter((e) => !claimed.has(e.id)).map((e) => e.id);
-  if (idsToDelete.length > 0) {
-    const { error } = await supabase.from("guest_companions").delete().in("id", idsToDelete);
-    if (error) throw error;
-  }
-
-  for (const [position, entry] of result.entries()) {
-    if (entry && entry.name !== names[position]) {
-      const { error } = await supabase.from("guest_companions").update({ name: names[position] }).eq("id", entry.id);
-      if (error) throw error;
-    }
-  }
-
-  if (toInsert.length > 0) {
-    const { data: inserted, error } = await supabase
-      .from("guest_companions")
-      .insert(toInsert.map((r) => ({ guest_id: guestId, name: r.name, position: r.position })))
-      .select("id, guest_id, name, checkin_code, position, checked_in, checked_in_at");
-    if (error) throw error;
-    for (const row of inserted as GuestCompanionRow[]) {
-      result[row.position] = mapCompanionRow(row);
-    }
-  }
-
-  return result.filter((c): c is GuestCompanion => Boolean(c));
-}
-
-/** Used on a "no" RSVP — revokes all of this guest's companion check-in codes; nothing to check in. */
-async function clearGuestCompanions(guestId: string): Promise<void> {
-  const supabase = createSupabaseAdminClient();
-  const { error } = await supabase.from("guest_companions").delete().eq("guest_id", guestId);
-  if (error) throw error;
-}
-
 export class RsvpValidationError extends Error {}
 
 /** Sets a guest's email address on its own — used at the envelope gate, before any RSVP choice is made. */
@@ -372,14 +314,22 @@ export async function setGuestEmail(token: string, email: string): Promise<Guest
   return mapRow(data as GuestRow, companions);
 }
 
-/** Appends to the append-only RSVP submission log that powers the admin activity timeline. */
-async function logRsvpEvent(guestId: string, status: Exclude<RsvpStatus, "pending">, isEdit: boolean): Promise<void> {
-  const supabase = createSupabaseAdminClient();
-  const { error } = await supabase.from("guest_rsvp_events").insert({ guest_id: guestId, status, is_edit: isEdit });
-  if (error) throw error;
+/** Postgres errors raised by `apply_rsvp()` (see `supabase/schema.sql`) arrive as plain `RAISE EXCEPTION` messages. */
+function rsvpRpcErrorMessage(error: { message?: string }): string | null {
+  const message = error.message ?? "";
+  if (message.includes("guest_not_found")) return "guest_not_found";
+  if (message.includes("too_many_companions")) return "too_many_companions";
+  if (message.includes("rate_limited")) return "rate_limited";
+  return null;
 }
 
-/** Validates against `partySizeAllowed` server-side (never trust a client-sent count) and persists the response. */
+/**
+ * Validates against `partySizeAllowed` server-side (never trust a client-sent count) and persists
+ * the response by calling the `apply_rsvp` Postgres function, which locks the guest row and does
+ * the status/companion-sync/event-log writes in one transaction — this closes the read-then-write
+ * race the previous implementation had between concurrent submissions for the same guest, and
+ * enforces a resubmission cooldown atomically so repeated calls can't spam confirmation emails.
+ */
 export async function submitRsvp(token: string, input: SubmitRsvpInput): Promise<{ guest: Guest; confirmationSent: boolean }> {
   const guest = await getGuestByToken(token);
   if (!guest) throw new RsvpValidationError("Invitado no encontrado.");
@@ -387,6 +337,8 @@ export async function submitRsvp(token: string, input: SubmitRsvpInput): Promise
   const companionNames = input.status === "yes" ? input.companionNames.map((n) => n.trim()).filter(Boolean) : [];
   const maxCompanions = guest.partySizeAllowed - 1;
 
+  // Pre-checked here too (in addition to the DB function) purely for a friendlier error message —
+  // the DB function is the authoritative enforcement, not this.
   if (companionNames.length > maxCompanions) {
     throw new RsvpValidationError(`Tu invitación es válida para ${guest.partySizeAllowed} persona(s) en total.`);
   }
@@ -396,29 +348,27 @@ export async function submitRsvp(token: string, input: SubmitRsvpInput): Promise
     throw new RsvpValidationError("Ingresa un correo electrónico válido para recibir la confirmación por correo.");
   }
 
-  const isEdit = guest.rsvpStatus !== "pending";
-  const attendingCount = input.status === "yes" ? 1 + companionNames.length : null;
-
   const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from("guests")
-    .update({
-      rsvp_status: input.status,
-      rsvp_attending_count: attendingCount,
-      email: email || guest.email,
-      rsvp_responded_at: new Date().toISOString(),
-    })
-    .eq("token", token)
-    .select("*")
-    .single();
-  if (error) throw error;
+  const { error } = await supabase.rpc("apply_rsvp", {
+    p_guest_id: guest.id,
+    p_status: input.status,
+    p_email: email,
+    p_companion_names: companionNames,
+  });
+  if (error) {
+    const code = rsvpRpcErrorMessage(error);
+    if (code === "guest_not_found") throw new RsvpValidationError("Invitado no encontrado.");
+    if (code === "too_many_companions") {
+      throw new RsvpValidationError(`Tu invitación es válida para ${guest.partySizeAllowed} persona(s) en total.`);
+    }
+    if (code === "rate_limited") {
+      throw new RsvpValidationError("Ya recibimos tu respuesta hace unos segundos. Espera un momento antes de volver a intentar.");
+    }
+    throw error;
+  }
 
-  const companions =
-    input.status === "yes" ? await syncGuestCompanions(guest.id, companionNames) : (await clearGuestCompanions(guest.id), []);
-
-  await logRsvpEvent(guest.id, input.status, isEdit);
-
-  const updatedGuest = mapRow(data as GuestRow, companions);
+  const updatedGuest = await getGuestByToken(token);
+  if (!updatedGuest) throw new RsvpValidationError("Invitado no encontrado.");
 
   // Runs strictly after the RSVP save above has already committed; never
   // throws, so a PDF/email failure can never roll back or block the save. Sent for both "yes" and
@@ -646,13 +596,34 @@ export async function checkInByCode(code: string): Promise<CheckinResult | null>
         checkedInAt: guestRow.checked_in_at as string,
       };
     }
+    // Atomic transition: only succeeds if `checked_in` is still false at write time, so two
+    // near-simultaneous scans of the same code can't both report a fresh "success" — the loser
+    // gets no row back and falls through to the query below, which sees the winner's update.
     const checkedInAt = new Date().toISOString();
-    const { error: updateError } = await supabase
+    const { data: updated, error: updateError } = await supabase
       .from("guests")
       .update({ checked_in: true, checked_in_at: checkedInAt })
-      .eq("id", guestRow.id);
+      .eq("id", guestRow.id)
+      .eq("checked_in", false)
+      .select("checked_in_at")
+      .maybeSingle();
     if (updateError) throw updateError;
-    return { personName: guestRow.name, guestName: guestRow.name, isCompanion: false, alreadyCheckedIn: false, checkedInAt };
+    if (updated) {
+      return { personName: guestRow.name, guestName: guestRow.name, isCompanion: false, alreadyCheckedIn: false, checkedInAt };
+    }
+    const { data: current, error: refetchError } = await supabase
+      .from("guests")
+      .select("checked_in_at")
+      .eq("id", guestRow.id)
+      .single();
+    if (refetchError) throw refetchError;
+    return {
+      personName: guestRow.name,
+      guestName: guestRow.name,
+      isCompanion: false,
+      alreadyCheckedIn: true,
+      checkedInAt: current.checked_in_at as string,
+    };
   }
 
   const { data: companionRow, error: companionError } = await supabase
@@ -681,22 +652,47 @@ export async function checkInByCode(code: string): Promise<CheckinResult | null>
   }
 
   const checkedInAt = new Date().toISOString();
-  const { error: updateError } = await supabase
+  const { data: updatedCompanion, error: updateError } = await supabase
     .from("guest_companions")
     .update({ checked_in: true, checked_in_at: checkedInAt })
-    .eq("id", companionRow.id);
+    .eq("id", companionRow.id)
+    .eq("checked_in", false)
+    .select("checked_in_at")
+    .maybeSingle();
   if (updateError) throw updateError;
 
+  if (updatedCompanion) {
+    return {
+      personName: companionRow.name,
+      guestName: parentGuest.name,
+      isCompanion: true,
+      alreadyCheckedIn: false,
+      checkedInAt,
+    };
+  }
+
+  const { data: currentCompanion, error: refetchError } = await supabase
+    .from("guest_companions")
+    .select("checked_in_at")
+    .eq("id", companionRow.id)
+    .single();
+  if (refetchError) throw refetchError;
   return {
     personName: companionRow.name,
     guestName: parentGuest.name,
     isCompanion: true,
-    alreadyCheckedIn: false,
-    checkedInAt,
+    alreadyCheckedIn: true,
+    checkedInAt: currentCompanion.checked_in_at as string,
   };
 }
 
-/** Admin manual override — sets RSVP status directly by guest id, bypassing token lookup. Same validation as the guest-facing form, but email is optional (guests who respond off-platform may have none on file). */
+/**
+ * Admin manual override — sets RSVP status directly by guest id, bypassing token lookup. Same
+ * validation and atomic `apply_rsvp` write path as the guest-facing form, but email is optional
+ * (guests who respond off-platform may have none on file) and the resubmission cooldown is
+ * bypassed — an admin correcting a guest's RSVP right after they submitted it themselves
+ * shouldn't be blocked by the same guard meant to stop a scripted client from spamming one guest.
+ */
 export async function overrideRsvp(id: string, input: SubmitRsvpInput): Promise<{ guest: Guest; confirmationSent: boolean }> {
   const guest = await getGuestById(id);
   if (!guest) throw new RsvpValidationError("Invitado no encontrado.");
@@ -712,29 +708,26 @@ export async function overrideRsvp(id: string, input: SubmitRsvpInput): Promise<
     throw new RsvpValidationError("El correo electrónico no es válido.");
   }
 
-  const isEdit = guest.rsvpStatus !== "pending";
-  const attendingCount = input.status === "yes" ? 1 + companionNames.length : null;
-
   const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from("guests")
-    .update({
-      rsvp_status: input.status,
-      rsvp_attending_count: attendingCount,
-      email: email || guest.email,
-      rsvp_responded_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .select("*")
-    .single();
-  if (error) throw error;
+  const { error } = await supabase.rpc("apply_rsvp", {
+    p_guest_id: id,
+    p_status: input.status,
+    p_email: email,
+    p_companion_names: companionNames,
+    p_bypass_cooldown: true,
+  });
+  if (error) {
+    const code = rsvpRpcErrorMessage(error);
+    if (code === "guest_not_found") throw new RsvpValidationError("Invitado no encontrado.");
+    if (code === "too_many_companions") {
+      throw new RsvpValidationError(`Esta invitación es válida para ${guest.partySizeAllowed} persona(s) en total.`);
+    }
+    throw error;
+  }
 
-  const companions =
-    input.status === "yes" ? await syncGuestCompanions(id, companionNames) : (await clearGuestCompanions(id), []);
+  const updatedGuest = await getGuestById(id);
+  if (!updatedGuest) throw new RsvpValidationError("Invitado no encontrado.");
 
-  await logRsvpEvent(id, input.status, isEdit);
-
-  const updatedGuest = mapRow(data as GuestRow, companions);
   // Same as submitRsvp — sent for both "yes" and "no" when an email is on file (optional here,
   // since overridden guests may have responded off-platform with no email captured).
   const confirmationSent = await sendGuestConfirmation(updatedGuest);
@@ -852,7 +845,7 @@ export async function setCompanionCheckedIn(companionId: string, checkedIn: bool
 
 /**
  * Admin-side direct rename of a companion — independent of the name-matching sync that runs when
- * the guest themselves edits their RSVP (`syncGuestCompanions`). Trade-off: if the guest later
+ * the guest themselves edits their RSVP (`apply_rsvp` in `supabase/schema.sql`). Trade-off: if the guest later
  * edits their RSVP from a page loaded before this rename, that edit's companion list still has the
  * old name, and the sync will treat it as a fresh add and lose the just-renamed row's identity.
  * Acceptable — this is an infrequent admin correction, not a common path.
