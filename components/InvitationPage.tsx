@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { DebugPanel } from "@/components/dev/DebugPanel";
 import { EnvelopeIntro } from "@/components/sections/EnvelopeIntro";
 import { NavBar } from "@/components/sections/NavBar";
 import { HeroSection } from "@/components/sections/HeroSection";
@@ -32,9 +34,19 @@ interface InvitationPageProps {
  */
 export function InvitationPage({ guest: initialGuest }: InvitationPageProps) {
   const [guest, setGuest] = useState(initialGuest);
+  const searchParams = useSearchParams();
+  const debugMode = searchParams.get("debug") === "1";
 
   return (
     <div className={styles.page}>
+      {debugMode && (
+        <DebugPanel
+          guestLocation={guest.guestLocation}
+          partySizeAllowed={guest.partySizeAllowed}
+          onChange={(overrides) => setGuest((g) => ({ ...g, ...overrides }))}
+        />
+      )}
+
       <EnvelopeIntro guest={guest} onEmailSaved={(email) => setGuest((g) => ({ ...g, email }))} />
 
       <div className={styles.container}>
