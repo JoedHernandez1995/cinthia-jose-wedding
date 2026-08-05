@@ -186,6 +186,7 @@ export const sectionIds = {
 // Marquee photo ids — Photo falls back to a placeholder if the file is
 // missing from /public/photos.
 export const marqueePhotoIds = [
+  "proposal-1",
   "marquee-1", "marquee-2", "marquee-3", "marquee-4", "marquee-5",
   "marquee-1-b", "marquee-2-b", "marquee-3-b", "marquee-4-b", "marquee-5-b",
 ];
