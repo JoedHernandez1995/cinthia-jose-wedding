@@ -7,8 +7,12 @@ import type { Faq, GiftAccount, RecommendationCategory } from "@/types/invitatio
  */
 
 export const siteMetadata = {
-  title: "Cinthia & José — 7 de Noviembre 2026",
-  description: "Invitación de boda de José & Cinthia",
+  title: "Cinthia & José | 7 de Noviembre 2026",
+  description: "Invitación de boda de Cinthia & José",
+  // Used for the link-preview card (WhatsApp, etc.) — actual pixel size is 750x1125.
+  ogImagePath: "/photos/hero-photo.webp",
+  ogImageWidth: 750,
+  ogImageHeight: 1125,
 };
 
 export const coupleNames = {
@@ -33,9 +37,9 @@ export const wedding = {
 
 export const calendarEvent = {
   fileName: "Boda-Jose-Cinthia.ics",
-  summary: "Boda de José & Cinthia",
+  summary: "Boda de Cinthia & José",
   location: "Hacienda El Trapiche, Tegucigalpa, Honduras",
-  description: "Celebración de la boda de José y Cinthia.",
+  description: "Celebración de la boda de Cinthia & José.",
   // Same instant as `wedding.dateTimeIso` above, expressed in UTC for ICS.
   startUtc: "20261107T220000Z",
   // Nov 8, 1:00 AM -06:00 == 07:00 UTC.
@@ -47,14 +51,14 @@ export const WHATSAPP_NUMBER = "50499999999";
 
 // Wedding planner's WhatsApp number — receives a courtesy notification after
 // each guest RSVP. Placeholder, replace before shipping.
-export const plannerWhatsAppNumber = "50488888888";
+export const plannerWhatsAppNumber = "50497740066";
 
 export const whatsappMessages = {
   // The wedding planner only sees this message as a raw WhatsApp text, so the guest's name must
   // always be spelled out in the text itself — she has no other way to know who's writing her.
   rsvpLastMinute: (guestName: string): string =>
-    `Hola, soy ${guestName}. La ventana de confirmación para la boda de José & Cinthia ya cerró, pero necesito avisar de un cambio de último momento en mi respuesta.`,
-  dressCodeQuestion: "¡Hola! Tengo una duda sobre el atuendo para la boda de José & Cinthia.",
+    `Hola, soy ${guestName}. La confirmación para la boda de Cinthia & José ya cerró, pero necesito avisarles de un cambio de último momento en mi respuesta.`,
+  dressCodeQuestion: "¡Hola! Tengo una duda sobre el código de vestimenta para la boda de Cinthia & José.",
 };
 
 export const faqContact = {

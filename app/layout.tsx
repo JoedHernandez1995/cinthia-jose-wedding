@@ -2,9 +2,24 @@ import type { Metadata } from "next";
 import { siteMetadata } from "@/config/site";
 import "./globals.css";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: siteMetadata.title,
   description: siteMetadata.description,
+  openGraph: {
+    title: siteMetadata.title,
+    description: siteMetadata.description,
+    images: [{ url: siteMetadata.ogImagePath, width: siteMetadata.ogImageWidth, height: siteMetadata.ogImageHeight }],
+    locale: "es_HN",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteMetadata.title,
+    description: siteMetadata.description,
+    images: [siteMetadata.ogImagePath],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

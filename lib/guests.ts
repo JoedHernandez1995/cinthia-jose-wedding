@@ -821,7 +821,7 @@ export function buildGuestInviteLink(
     ? "Queremos compartir con ustedes algo muy especial: su invitación a nuestra boda. Nos hará mucha ilusión tenerlos con nosotros en este día tan importante."
     : "Queremos compartir contigo algo muy especial: tu invitación a nuestra boda. Nos hará mucha ilusión tenerte con nosotros en este día tan importante.";
 
-  const message = `${greetingName}\n\n${body}\n\nJosé & Cinthia\n\n${personalUrl}`;
+  const message = `${greetingName}\n\n${body}\n\nCinthia & José\n\n${personalUrl}`;
   return buildWhatsAppLink(guest.whatsappNumber, message);
 }
 
@@ -842,7 +842,7 @@ export function buildGuestReminderLink(
     ? `Todavía no hemos recibido su confirmación para nuestra boda. Agradeceríamos que nos confirmen antes del ${wedding.rsvpDeadlineLabel}.`
     : `Todavía no hemos recibido tu confirmación para nuestra boda. Agradeceríamos que nos confirmes antes del ${wedding.rsvpDeadlineLabel}.`;
 
-  const message = `${greetingName}\n\n${body}\n\nJosé & Cinthia\n\n${personalUrl}`;
+  const message = `${greetingName}\n\n${body}\n\nCinthia & José\n\n${personalUrl}`;
   return buildWhatsAppLink(guest.whatsappNumber, message);
 }
 
@@ -861,7 +861,7 @@ export function buildGuestConfirmationResendLink(
   const greetingName = guest.displayName || guest.name;
   const isPlural = Boolean(guest.displayName) && guest.partySizeAllowed > 1;
   const verbPhrase = isPlural ? "tienen de nuevo su comprobante" : "tenés de nuevo tu comprobante";
-  const message = `¡Hola ${greetingName}! Aquí ${verbPhrase} con código QR para la boda de José & Cinthia:\n${comprobanteUrl}`;
+  const message = `¡Hola ${greetingName}! Aquí ${verbPhrase} con código QR para la boda de Cinthia & José:\n${comprobanteUrl}`;
   return buildWhatsAppLink(guest.whatsappNumber, message);
 }
 
@@ -880,7 +880,7 @@ export function buildCompanionConfirmationResendLink(
   const greetingName = guest.displayName || guest.name;
   const isPlural = Boolean(guest.displayName) && guest.partySizeAllowed > 1;
   const verbPhrase = isPlural ? "tienen de nuevo" : "tenés de nuevo";
-  const message = `¡Hola ${greetingName}! Aquí ${verbPhrase} el comprobante con el código QR de ${companionName} para la boda de José & Cinthia:\n${comprobanteUrl}`;
+  const message = `¡Hola ${greetingName}! Aquí ${verbPhrase} el comprobante con el código QR de ${companionName} para la boda de Cinthia & José:\n${comprobanteUrl}`;
   return buildWhatsAppLink(guest.whatsappNumber, message);
 }
 
