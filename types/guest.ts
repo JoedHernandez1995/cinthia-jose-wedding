@@ -33,6 +33,8 @@ export interface Guest {
   inviteSentAt: string | null;
   rsvpStatus: RsvpStatus;
   rsvpAttendingCount: number | null;
+  /** Only meaningful when `rsvpStatus === "yes"`. False means the named guest declined but named companions still attend. */
+  primaryAttending: boolean | null;
   /** Derived from `companions` (source of truth) — kept for callers that only need names. */
   companionNames: string[];
   companions: GuestCompanion[];
@@ -80,6 +82,7 @@ export interface GuestViewModel {
   partySizeAllowed: number;
   rsvpStatus: RsvpStatus;
   rsvpAttendingCount: number | null;
+  primaryAttending: boolean | null;
   companionNames: string[];
 }
 
@@ -88,6 +91,8 @@ export interface SubmitRsvpInput {
   companionNames: string[];
   /** Required (validated) when status is "yes" on the guest-facing form; optional on admin override. */
   email?: string;
+  /** Only relevant when status is "yes". Defaults to true — the named guest attends along with any companions. Set false when the named guest declines but companions still attend (requires at least one companion). */
+  primaryAttending?: boolean;
 }
 
 /** Result of scanning a check-in QR code (guest or companion) at `/checkin/[code]`. */

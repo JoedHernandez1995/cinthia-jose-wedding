@@ -9,11 +9,15 @@ import type { Guest } from "@/types/guest";
 
 const monogramSrc = path.join(process.cwd(), "public", "assets", "monogram.png");
 
-/** Builds the confirmation PDF for a guest: event summary + one QR-coded entry per person (guest + each companion). */
+/**
+ * Builds the confirmation PDF for a guest: event summary + one QR-coded entry per attending
+ * person. Skips the guest's own entry when `primaryAttending === false` (they declined but named
+ * companions still attend) — companions are always included regardless.
+ */
 export async function buildInvitationPdf(guest: Guest): Promise<Buffer> {
   const people: PdfPerson[] = await Promise.all(
     [
-      { name: guest.name, checkinCode: guest.checkinCode },
+      ...(guest.primaryAttending === false ? [] : [{ name: guest.name, checkinCode: guest.checkinCode }]),
       ...guest.companions.map((c) => ({ name: c.name, checkinCode: c.checkinCode })),
     ].map(async (person) => ({ ...person, qrDataUri: await generateQrDataUri(person.checkinCode) })),
   );

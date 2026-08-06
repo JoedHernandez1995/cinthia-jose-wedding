@@ -37,6 +37,7 @@ interface GuestRow {
   invite_sent_at: string | null;
   rsvp_status: RsvpStatus;
   rsvp_attending_count: number | null;
+  primary_attending: boolean | null;
   rsvp_responded_at: string | null;
   confirmation_sent_at: string | null;
   confirmation_send_error: string | null;
@@ -85,6 +86,7 @@ function mapRow(row: GuestRow, companions: GuestCompanion[]): Guest {
     inviteSentAt: row.invite_sent_at,
     rsvpStatus: row.rsvp_status,
     rsvpAttendingCount: row.rsvp_attending_count,
+    primaryAttending: row.primary_attending,
     companionNames: companions.map((c) => c.name),
     companions,
     checkedIn: row.checked_in,
@@ -143,6 +145,7 @@ export function toGuestViewModel(guest: Guest): GuestViewModel {
     partySizeAllowed: guest.partySizeAllowed,
     rsvpStatus: guest.rsvpStatus,
     rsvpAttendingCount: guest.rsvpAttendingCount,
+    primaryAttending: guest.primaryAttending,
     companionNames: guest.companionNames,
   };
 }
@@ -332,6 +335,7 @@ function rsvpRpcErrorMessage(error: { message?: string }): string | null {
   if (message.includes("guest_not_found")) return "guest_not_found";
   if (message.includes("too_many_companions")) return "too_many_companions";
   if (message.includes("rate_limited")) return "rate_limited";
+  if (message.includes("primary_declined_no_companions")) return "primary_declined_no_companions";
   return null;
 }
 
@@ -348,11 +352,17 @@ export async function submitRsvp(token: string, input: SubmitRsvpInput): Promise
 
   const companionNames = input.status === "yes" ? input.companionNames.map((n) => n.trim()).filter(Boolean) : [];
   const maxCompanions = guest.partySizeAllowed - 1;
+  const primaryAttending = input.primaryAttending ?? true;
 
   // Pre-checked here too (in addition to the DB function) purely for a friendlier error message —
   // the DB function is the authoritative enforcement, not this.
   if (companionNames.length > maxCompanions) {
     throw new RsvpValidationError(`Tu invitación es válida para ${guest.partySizeAllowed} persona(s) en total.`);
+  }
+  if (input.status === "yes" && !primaryAttending && companionNames.length === 0) {
+    throw new RsvpValidationError(
+      "Si no vas a asistir, elegí \"No podré asistir\" en lugar de dejar el campo de acompañantes vacío.",
+    );
   }
 
   const email = input.email?.trim() ?? "";
@@ -366,6 +376,7 @@ export async function submitRsvp(token: string, input: SubmitRsvpInput): Promise
     p_status: input.status,
     p_email: email,
     p_companion_names: companionNames,
+    p_primary_attending: primaryAttending,
   });
   if (error) {
     const code = rsvpRpcErrorMessage(error);
@@ -375,6 +386,11 @@ export async function submitRsvp(token: string, input: SubmitRsvpInput): Promise
     }
     if (code === "rate_limited") {
       throw new RsvpValidationError("Ya recibimos tu respuesta hace unos segundos. Espera un momento antes de volver a intentar.");
+    }
+    if (code === "primary_declined_no_companions") {
+      throw new RsvpValidationError(
+        "Si no vas a asistir, elegí \"No podré asistir\" en lugar de dejar el campo de acompañantes vacío.",
+      );
     }
     throw error;
   }
@@ -711,8 +727,14 @@ export async function overrideRsvp(id: string, input: SubmitRsvpInput): Promise<
 
   const companionNames = input.status === "yes" ? input.companionNames.map((n) => n.trim()).filter(Boolean) : [];
   const maxCompanions = guest.partySizeAllowed - 1;
+  const primaryAttending = input.primaryAttending ?? true;
   if (companionNames.length > maxCompanions) {
     throw new RsvpValidationError(`Esta invitación es válida para ${guest.partySizeAllowed} persona(s) en total.`);
+  }
+  if (input.status === "yes" && !primaryAttending && companionNames.length === 0) {
+    throw new RsvpValidationError(
+      "El invitado principal solo puede marcarse como \"no asistirá\" si hay al menos un acompañante confirmado.",
+    );
   }
 
   const email = input.email?.trim() ?? "";
@@ -727,12 +749,18 @@ export async function overrideRsvp(id: string, input: SubmitRsvpInput): Promise<
     p_email: email,
     p_companion_names: companionNames,
     p_bypass_cooldown: true,
+    p_primary_attending: primaryAttending,
   });
   if (error) {
     const code = rsvpRpcErrorMessage(error);
     if (code === "guest_not_found") throw new RsvpValidationError("Invitado no encontrado.");
     if (code === "too_many_companions") {
       throw new RsvpValidationError(`Esta invitación es válida para ${guest.partySizeAllowed} persona(s) en total.`);
+    }
+    if (code === "primary_declined_no_companions") {
+      throw new RsvpValidationError(
+        "El invitado principal solo puede marcarse como \"no asistirá\" si hay al menos un acompañante confirmado.",
+      );
     }
     throw error;
   }
@@ -755,7 +783,7 @@ function csvEscape(value: string): string {
 export async function exportGuestsCsv(): Promise<string> {
   const guests = await listGuests();
   const header =
-    "name,display_name,whatsapp_number,email,invited_by,guest_location,party_size_allowed,rsvp_status,rsvp_attending_count,companion_names,rsvp_responded_at";
+    "name,display_name,whatsapp_number,email,invited_by,guest_location,party_size_allowed,rsvp_status,rsvp_attending_count,primary_attending,companion_names,rsvp_responded_at";
   const lines = guests.map((g) =>
     [
       csvEscape(g.name),
@@ -767,6 +795,7 @@ export async function exportGuestsCsv(): Promise<string> {
       String(g.partySizeAllowed),
       g.rsvpStatus,
       g.rsvpAttendingCount ?? "",
+      g.primaryAttending === null ? "" : String(g.primaryAttending),
       csvEscape(g.companionNames.join("; ")),
       g.rsvpRespondedAt ?? "",
     ].join(","),

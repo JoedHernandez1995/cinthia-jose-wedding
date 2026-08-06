@@ -195,6 +195,7 @@ export async function overrideRsvpAction(_prevState: ActionResult | null, formDa
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "") as RsvpStatus;
   const email = String(formData.get("email") ?? "").trim();
+  const primaryAttending = String(formData.get("primaryAttending") ?? "yes") !== "no";
   const companionNamesRaw = String(formData.get("companionNames") ?? "");
   const companionNames = companionNamesRaw
     .split(",")
@@ -206,7 +207,7 @@ export async function overrideRsvpAction(_prevState: ActionResult | null, formDa
   }
 
   try {
-    await overrideRsvp(id, { status, email: email || undefined, companionNames });
+    await overrideRsvp(id, { status, email: email || undefined, companionNames, primaryAttending });
   } catch (error) {
     if (error instanceof RsvpValidationError) {
       return { ok: false, message: error.message };

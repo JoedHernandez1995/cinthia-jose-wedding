@@ -9,6 +9,8 @@ interface RsvpCompanionFieldsProps {
   initialCompanionNames: string[];
   submitting: boolean;
   errorMessage?: string;
+  /** Floor for the count selector — e.g. 1 when the primary guest has already declined and at least one named companion is required. Defaults to 0. */
+  minCompanions?: number;
   onCancel: () => void;
   onConfirm: (companionNames: string[]) => void;
 }
@@ -24,14 +26,19 @@ export function RsvpCompanionFields({
   initialCompanionNames,
   submitting,
   errorMessage,
+  minCompanions = 0,
   onCancel,
   onConfirm,
 }: RsvpCompanionFieldsProps) {
   const maxCompanions = partySizeAllowed - 1;
-  const [names, setNames] = useState<string[]>(() => initialCompanionNames.slice(0, maxCompanions));
+  const [names, setNames] = useState<string[]>(() => {
+    const base = initialCompanionNames.slice(0, maxCompanions);
+    while (base.length < minCompanions) base.push("");
+    return base;
+  });
 
   function setCount(count: number) {
-    const clamped = Math.max(0, Math.min(count, maxCompanions));
+    const clamped = Math.max(minCompanions, Math.min(count, maxCompanions));
     setNames((prev) => {
       const next = prev.slice(0, clamped);
       while (next.length < clamped) next.push("");
@@ -55,7 +62,7 @@ export function RsvpCompanionFields({
           onChange={(e) => setCount(Number(e.target.value))}
           disabled={submitting}
         >
-          {Array.from({ length: maxCompanions + 1 }, (_, n) => (
+          {Array.from({ length: maxCompanions - minCompanions + 1 }, (_, i) => minCompanions + i).map((n) => (
             <option key={n} value={n}>
               {n} {n === 1 ? "acompañante" : "acompañantes"}
             </option>

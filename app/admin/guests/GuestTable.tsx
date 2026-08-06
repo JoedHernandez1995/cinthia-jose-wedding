@@ -387,7 +387,11 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                     )}
                   </td>
                   <td>
-                    {guest.rsvpStatus === "yes" && <span className={styles.badgeYes}>Sí · {guest.rsvpAttendingCount}</span>}
+                    {guest.rsvpStatus === "yes" && (
+                      <span className={styles.badgeYes}>
+                        {guest.primaryAttending === false ? "Sí (sin el invitado)" : "Sí"} · {guest.rsvpAttendingCount}
+                      </span>
+                    )}
                     {guest.rsvpStatus === "no" && <span className={styles.badgeNo}>No</span>}
                     {guest.rsvpStatus === "pending" && <span className={styles.badgePending}>Pendiente</span>}
                   </td>

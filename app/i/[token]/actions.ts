@@ -7,7 +7,13 @@ import { RateLimitError, enforceRateLimit, ipRateLimitKey } from "@/lib/rateLimi
 import type { SubmitRsvpInput } from "@/types/guest";
 
 export type SubmitRsvpResult =
-  | { ok: true; rsvpAttendingCount: number | null; companionNames: string[]; confirmationSent: boolean }
+  | {
+      ok: true;
+      rsvpAttendingCount: number | null;
+      primaryAttending: boolean | null;
+      companionNames: string[];
+      confirmationSent: boolean;
+    }
   | { ok: false; error: string };
 
 export async function submitRsvpAction(token: string, input: SubmitRsvpInput): Promise<SubmitRsvpResult> {
@@ -22,6 +28,7 @@ export async function submitRsvpAction(token: string, input: SubmitRsvpInput): P
     return {
       ok: true,
       rsvpAttendingCount: guest.rsvpAttendingCount,
+      primaryAttending: guest.primaryAttending,
       companionNames: guest.companionNames,
       confirmationSent,
     };

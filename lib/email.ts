@@ -12,10 +12,21 @@ export interface SendRsvpConfirmationEmailInput {
   to: string;
   guestName: string;
   status: "yes" | "no";
+  /** Only meaningful when `status` is "yes". False means the named guest declined but named companions still attend. */
+  primaryAttending: boolean | null;
+  companionNames: string[];
   /** Personal token — builds the `/i/[token]#rsvp` link so the guest can edit their response. */
   token: string;
   /** Only set when `status` is "yes" — a "no" RSVP has no check-in QR codes to send. */
   pdfBuffer?: Buffer;
+}
+
+/** "attending" = the named guest is coming (with or without companions); "declined" = nobody in the party is coming; "companionsOnly" = the named guest declined but named companions still attend. */
+type ConfirmationVariant = "attending" | "declined" | "companionsOnly";
+
+function variantOf(status: "yes" | "no", primaryAttending: boolean | null): ConfirmationVariant {
+  if (status === "no") return "declined";
+  return primaryAttending === false ? "companionsOnly" : "attending";
 }
 
 /**
@@ -41,7 +52,12 @@ const summaryFields: Array<{ label: string; value: string }> = [
  * so this intentionally falls back to system font stacks rather than the site's Poppins/Slight —
  * that's an inherent email-client limitation, not something worth fighting here.
  */
-function buildConfirmationEmailHtml(guestName: string, status: "yes" | "no", editLink: string): string {
+function buildConfirmationEmailHtml(
+  guestName: string,
+  variant: ConfirmationVariant,
+  editLink: string,
+  companionNames: string[],
+): string {
   const siteUrl = getSiteUrl();
   const summaryRows = summaryFields
     .map(
@@ -58,18 +74,21 @@ function buildConfirmationEmailHtml(guestName: string, status: "yes" | "no", edi
     .join("");
 
   const introText =
-    status === "yes"
+    variant === "attending"
       ? `¡Qué alegría saber que vas a acompañarnos! Gracias por confirmar. Nos hace mucha ilusión compartir este día con vos.`
-      : `Entendemos que esta vez no vas a poder acompañarnos. Gracias por avisarnos. Nos hubiera encantado tenerte con nosotros.`;
+      : variant === "companionsOnly"
+        ? `Entendemos que no vas a poder acompañarnos, pero nos alegra saber que sí vendrán: ${companionNames.join(", ")}. Gracias por avisarnos.`
+        : `Entendemos que esta vez no vas a poder acompañarnos. Gracias por avisarnos. Nos hubiera encantado tenerte con nosotros.`;
 
   const editText =
-    status === "yes"
-      ? `¿Cambiaste de planes? No pasa nada. Podés actualizar tu respuesta antes del ${wedding.rsvpDeadlineLabel} desde el siguiente enlace.`
-      : `¿Cambiaste de planes? Nos encantaría que pudieras acompañarnos. Podés actualizar tu respuesta antes del ${wedding.rsvpDeadlineLabel} desde el siguiente enlace.`;
+    variant === "declined"
+      ? `¿Cambiaste de planes? Nos encantaría que pudieras acompañarnos. Podés actualizar tu respuesta antes del ${wedding.rsvpDeadlineLabel} desde el siguiente enlace.`
+      : `¿Cambiaste de planes? No pasa nada. Podés actualizar tu respuesta antes del ${wedding.rsvpDeadlineLabel} desde el siguiente enlace.`;
 
   const summarySection =
-    status === "yes"
-      ? `
+    variant === "declined"
+      ? ""
+      : `
         <div style="padding: 0 32px 28px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: ${brandColors.bgAlt}; border: 1px solid ${brandColors.border}; border-radius: 6px; padding: 4px 18px;">
             ${summaryRows}
@@ -78,12 +97,15 @@ function buildConfirmationEmailHtml(guestName: string, status: "yes" | "no", edi
 
         <div style="padding: 0 32px 28px; text-align: center;">
           <p style="margin: 0; font-size: 13px; line-height: 1.6; color: ${brandColors.mutedLight};">
-            Adjunto encontrarás tu comprobante en PDF con el resumen del evento y tu código QR de acceso.
-            Al llegar, presentalo desde tu celular o impreso para poder ingresar.
+            ${
+              variant === "companionsOnly"
+                ? "Adjunto encontrarás el comprobante en PDF con el resumen del evento y los códigos QR de acceso de tus acompañantes."
+                : "Adjunto encontrarás tu comprobante en PDF con el resumen del evento y tu código QR de acceso."
+            }
+            Al llegar, ${variant === "companionsOnly" ? "deben presentarlo" : "presentalo"} desde el celular o impreso para poder ingresar.
             ¡Nos vemos pronto!
           </p>
-        </div>`
-      : "";
+        </div>`;
 
   return `
     <div style="background: ${brandColors.bg}; padding: 32px 16px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
@@ -119,19 +141,30 @@ function buildConfirmationEmailHtml(guestName: string, status: "yes" | "no", edi
     </div>`;
 }
 
-export async function sendRsvpConfirmationEmail({ to, guestName, status, token, pdfBuffer }: SendRsvpConfirmationEmailInput): Promise<void> {
+export async function sendRsvpConfirmationEmail({
+  to,
+  guestName,
+  status,
+  primaryAttending,
+  companionNames,
+  token,
+  pdfBuffer,
+}: SendRsvpConfirmationEmailInput): Promise<void> {
   const resend = getResendClient();
   const fromEmail = requireEnv("RESEND_FROM_EMAIL");
   const editLink = `${getSiteUrl()}/i/${token}#rsvp`;
+  const variant = variantOf(status, primaryAttending);
 
   const { error } = await resend.emails.send({
     from: fromEmail,
     to,
     subject:
-      status === "yes"
-        ? `Confirmación de asistencia — Boda ${coupleNames.full}`
-        : `Recibimos tu respuesta — Boda ${coupleNames.full}`,
-    html: buildConfirmationEmailHtml(guestName, status, editLink),
+      variant === "declined"
+        ? `Recibimos tu respuesta — Boda ${coupleNames.full}`
+        : variant === "companionsOnly"
+          ? `Confirmación de asistencia de tus acompañantes — Boda ${coupleNames.full}`
+          : `Confirmación de asistencia — Boda ${coupleNames.full}`,
+    html: buildConfirmationEmailHtml(guestName, variant, editLink, companionNames),
     attachments: pdfBuffer
       ? [
           {

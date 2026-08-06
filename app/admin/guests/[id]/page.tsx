@@ -64,11 +64,20 @@ export default async function AdminGuestDetailPage({ params }: { params: { id: s
             <dt>Estado RSVP</dt>
             <dd>
               {guest.rsvpStatus === "pending" && "Pendiente"}
-              {guest.rsvpStatus === "yes" && `Confirmado · ${guest.rsvpAttendingCount} asistente(s)`}
+              {guest.rsvpStatus === "yes" &&
+                (guest.primaryAttending === false
+                  ? `Confirmado (sin el invitado) · ${guest.rsvpAttendingCount} asistente(s)`
+                  : `Confirmado · ${guest.rsvpAttendingCount} asistente(s)`)}
               {guest.rsvpStatus === "no" && "No asistirá"}
             </dd>
             <dt>Check-in</dt>
-            <dd>{guest.checkedIn ? `Sí · ${formatDate(guest.checkedInAt)}` : "Pendiente"}</dd>
+            <dd>
+              {guest.primaryAttending === false
+                ? "No asistirá"
+                : guest.checkedIn
+                  ? `Sí · ${formatDate(guest.checkedInAt)}`
+                  : "Pendiente"}
+            </dd>
             <dt>Acompañantes confirmados</dt>
             <dd>
               {guest.companions.length > 0 ? (

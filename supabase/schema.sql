@@ -182,6 +182,17 @@ alter table guests add constraint guests_attending_count_check
 create unique index if not exists guest_companions_guest_name_idx
   on guest_companions (guest_id, lower(trim(name)));
 
+-- Lets the primary named guest decline while their named companions still attend (rsvp_status
+-- stays "yes" — "at least one person in this party is attending"; primary_attending says whether
+-- the named guest themselves is among them). Only meaningful when rsvp_status = 'yes'.
+alter table guests add column if not exists primary_attending boolean;
+-- Backfill existing "yes" rows before adding the NOT NULL-when-yes constraint below — every RSVP
+-- confirmed before this feature existed had the named guest attending by definition.
+update guests set primary_attending = true where rsvp_status = 'yes' and primary_attending is null;
+alter table guests drop constraint if exists guests_primary_attending_check;
+alter table guests add constraint guests_primary_attending_check
+  check (rsvp_status <> 'yes' or primary_attending is not null);
+
 -- Atomically applies an RSVP (guest-facing submit or admin override): locks the guest row for the
 -- duration of the transaction so two concurrent submissions for the same guest serialize instead
 -- of racing (the previous implementation read the guest, validated, then wrote in separate round
@@ -193,7 +204,8 @@ create or replace function apply_rsvp(
   p_status text,
   p_email text,
   p_companion_names text[],
-  p_bypass_cooldown boolean default false
+  p_bypass_cooldown boolean default false,
+  p_primary_attending boolean default true
 ) returns void language plpgsql as $$
 declare
   v_guest guests%rowtype;
@@ -219,7 +231,11 @@ begin
     if coalesce(array_length(p_companion_names, 1), 0) > v_max_companions then
       raise exception 'too_many_companions';
     end if;
-    v_attending_count := 1 + coalesce(array_length(p_companion_names, 1), 0);
+    if not p_primary_attending and coalesce(array_length(p_companion_names, 1), 0) = 0 then
+      raise exception 'primary_declined_no_companions';
+    end if;
+    v_attending_count := (case when p_primary_attending then 1 else 0 end)
+      + coalesce(array_length(p_companion_names, 1), 0);
   else
     v_attending_count := null;
   end if;
@@ -229,6 +245,7 @@ begin
   update guests set
     rsvp_status = p_status,
     rsvp_attending_count = v_attending_count,
+    primary_attending = case when p_status = 'yes' then p_primary_attending else null end,
     email = coalesce(nullif(p_email, ''), v_guest.email),
     rsvp_responded_at = now()
   where id = p_guest_id;

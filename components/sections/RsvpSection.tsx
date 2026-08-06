@@ -27,10 +27,15 @@ interface RsvpSectionProps {
 export function RsvpSection({ guest }: RsvpSectionProps) {
   const [status, setStatus] = useState<RsvpStatus>(guest.rsvpStatus);
   const [companionNames, setCompanionNames] = useState(guest.companionNames);
+  const [primaryAttending, setPrimaryAttending] = useState(guest.primaryAttending);
   const [confirmationSent, setConfirmationSent] = useState(true);
-  const [mode, setMode] = useState<"choosing" | "collecting" | "confirmed">(
+  const [mode, setMode] = useState<"choosing" | "decliningPrompt" | "collecting" | "confirmed">(
     guest.rsvpStatus === "pending" ? "choosing" : "confirmed",
   );
+  // True while `mode === "collecting"` was entered via "some companions can still come" rather
+  // than the normal "Sí, asistiré" path — decides `minCompanions` and the `primaryAttending` value
+  // sent on confirm.
+  const [decliningWithCompanions, setDecliningWithCompanions] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
 
@@ -43,7 +48,11 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
   const showClosedContact = pastDeadline && (mode === "confirmed" || (mode === "choosing" && neverResponded));
   const plannerLastMinuteLink = buildWhatsAppLink(plannerWhatsAppNumber, whatsappMessages.rsvpLastMinute(guest.name));
 
-  async function performSubmit(nextStatus: Exclude<RsvpStatus, "pending">, nextCompanionNames: string[]) {
+  async function performSubmit(
+    nextStatus: Exclude<RsvpStatus, "pending">,
+    nextCompanionNames: string[],
+    nextPrimaryAttending: boolean = true,
+  ) {
     setSubmitting(true);
     setErrorMessage(undefined);
 
@@ -51,6 +60,7 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
       status: nextStatus,
       email: guest.email ?? undefined,
       companionNames: nextCompanionNames,
+      primaryAttending: nextPrimaryAttending,
     });
 
     setSubmitting(false);
@@ -62,7 +72,9 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
 
     setStatus(nextStatus);
     setCompanionNames(result.companionNames);
+    setPrimaryAttending(result.primaryAttending);
     setConfirmationSent(result.confirmationSent);
+    setDecliningWithCompanions(false);
     setMode("confirmed");
   }
 
@@ -76,22 +88,32 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
   }
 
   function handleNoClick() {
-    performSubmit("no", []);
+    if (maxCompanions > 0) {
+      setErrorMessage(undefined);
+      setMode("decliningPrompt");
+    } else {
+      performSubmit("no", []);
+    }
   }
 
   return (
     <RsvpShell>
       {showClosedContact && neverResponded && (
-        <p className={styles.confirmation}>
+        <p className={styles.confirmationNo}>
           El tiempo para confirmar tu asistencia ya se cerró, te vamos a extrañar. Podés contactarte con{" "}
           {faqContact.name} si tenés cualquier duda.
         </p>
       )}
 
       {mode === "confirmed" && status !== "pending" && (
-        <div className={styles.confirmation}>
+        <div className={status === "yes" ? styles.confirmationYes : styles.confirmationNo}>
+          {status === "yes" && <span className={styles.confirmationIcon}>✓</span>}
           {status === "yes" ? (
-            companionNames.length > 0 ? (
+            primaryAttending === false ? (
+              <>
+                {guest.name}, entendemos que no podrás acompañarnos. Vamos a recibir con mucho gusto a: {companionNames.join(", ")}.
+              </>
+            ) : companionNames.length > 0 ? (
               <>
                 {guest.name}, ¡gracias por confirmar! Van a venir junto con: {companionNames.join(", ")}. Los esperamos con muchas ganas.
               </>
@@ -106,7 +128,19 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
         </div>
       )}
 
-      {mode === "confirmed" && status === "yes" && (
+      {mode === "confirmed" &&
+        status === "yes" &&
+        primaryAttending !== false &&
+        companionNames.length === 0 &&
+        maxCompanions > 0 &&
+        !pastDeadline && (
+          <p className={styles.plusOneNote}>
+            Tu invitación permite acompañante. Si querés agregarlo, todavía tenés hasta el {wedding.rsvpDeadlineLabel} para
+            editar tu respuesta y sumarlo.
+          </p>
+        )}
+
+      {mode === "confirmed" && status === "yes" && primaryAttending !== false && (
         <p className={styles.nextStepsNote}>
           Antes de irte, revisá el <a href={`#${sectionIds.vestimenta}`}>código de vestimenta</a>
           {guest.guestLocation === "extranjero" ? (
@@ -142,17 +176,40 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
             NO PODRÉ ASISTIR
           </button>
         </div>
+      ) : mode === "decliningPrompt" ? (
+        <div className={styles.decliningPrompt}>
+          <p className={styles.decliningPromptText}>¿Alguno de tus acompañantes podrá venir aunque tú no puedas?</p>
+          <div className={styles.buttonList}>
+            <button type="button" className={styles.noButton} disabled={submitting} onClick={() => performSubmit("no", [])}>
+              NO, NINGUNO
+            </button>
+            <button
+              type="button"
+              className={styles.yesButton}
+              disabled={submitting}
+              onClick={() => {
+                setErrorMessage(undefined);
+                setDecliningWithCompanions(true);
+                setMode("collecting");
+              }}
+            >
+              SÍ, ALGUNOS SÍ
+            </button>
+          </div>
+        </div>
       ) : mode === "collecting" ? (
         <RsvpCompanionFields
           partySizeAllowed={guest.partySizeAllowed}
           initialCompanionNames={companionNames}
           submitting={submitting}
           errorMessage={errorMessage}
+          minCompanions={decliningWithCompanions ? 1 : 0}
           onCancel={() => {
             setErrorMessage(undefined);
+            setDecliningWithCompanions(false);
             setMode("choosing");
           }}
-          onConfirm={(names) => performSubmit("yes", names)}
+          onConfirm={(names) => performSubmit("yes", names, !decliningWithCompanions)}
         />
       ) : showClosedContact ? (
         <div className={styles.closedWindow}>

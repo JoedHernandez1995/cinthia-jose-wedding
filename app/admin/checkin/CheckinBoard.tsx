@@ -20,15 +20,19 @@ interface PersonRow {
 function flatten(guests: Guest[]): PersonRow[] {
   const rows: PersonRow[] = [];
   for (const guest of guests) {
-    rows.push({
-      key: guest.id,
-      guestId: guest.id,
-      companionId: null,
-      name: guest.name,
-      guestName: guest.name,
-      isCompanion: false,
-      checkedIn: guest.checkedIn,
-    });
+    // Skip the primary's own row when they declined but named companions still attend — they were
+    // never going to be checked in.
+    if (guest.primaryAttending !== false) {
+      rows.push({
+        key: guest.id,
+        guestId: guest.id,
+        companionId: null,
+        name: guest.name,
+        guestName: guest.name,
+        isCompanion: false,
+        checkedIn: guest.checkedIn,
+      });
+    }
     for (const companion of guest.companions) {
       rows.push({
         key: companion.id,

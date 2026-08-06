@@ -21,6 +21,8 @@ export async function sendGuestConfirmation(guest: Guest): Promise<boolean> {
       to: guest.email,
       guestName: guest.name,
       status: guest.rsvpStatus,
+      primaryAttending: guest.primaryAttending,
+      companionNames: guest.companionNames,
       token: guest.token,
       pdfBuffer,
     });

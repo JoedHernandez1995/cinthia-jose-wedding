@@ -34,16 +34,53 @@
   margin: 0 auto;
 }
 
-.confirmation {
+.confirmationYes,
+.confirmationNo {
   font: 400 italic 15px/1.6 var(--font-serif);
   color: var(--color-ink);
   margin-bottom: 16px;
+  padding: 20px 18px;
+  border-radius: 6px;
+}
+
+.confirmationYes {
+  background: rgba(201, 168, 119, 0.16);
+  border: 1.5px solid var(--color-gold);
+  font-weight: 500;
+}
+
+.confirmationNo {
+  background: var(--color-bg-alt);
+  border: 1.5px solid var(--color-border);
+}
+
+.confirmationIcon {
+  display: block;
+  font: 400 26px/1 var(--font-serif);
+  color: var(--color-gold);
+  margin-bottom: 8px;
+}
+
+.plusOneNote {
+  composes: confirmationYes;
 }
 
 .buttonList {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.decliningPrompt {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.decliningPromptText {
+  font: 400 italic 14px/1.6 var(--font-serif);
+  color: var(--color-ink);
+  margin: 0;
 }
 
 .yesButton {
@@ -110,19 +147,16 @@
 }
 
 .confirmationNote {
-  font: 400 12px/1.6 var(--font-label);
-  color: var(--color-muted-light);
-  margin: -8px 0 16px;
+  composes: confirmationYes;
 }
 
 .nextStepsNote {
-  font: 400 12px/1.6 var(--font-label);
-  color: var(--color-muted-light);
-  margin: -8px 0 16px;
+  composes: confirmationYes;
 }
 
 .nextStepsNote a {
-  color: var(--color-gold);
+  color: inherit;
+  font-weight: 600;
   text-decoration: underline;
 }
 

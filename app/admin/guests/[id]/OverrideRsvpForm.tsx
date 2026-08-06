@@ -38,6 +38,13 @@ export function OverrideRsvpForm({ guest }: { guest: Guest }) {
         </select>
       </label>
       <label className={styles.label}>
+        Invitado principal (solo aplica si el estado es "Confirmado")
+        <select name="primaryAttending" defaultValue={guest.primaryAttending === false ? "no" : "yes"} className={styles.select}>
+          <option value="yes">Sí asistirá</option>
+          <option value="no">No, pero sus acompañantes sí</option>
+        </select>
+      </label>
+      <label className={styles.label}>
         Correo (para reenviar el comprobante)
         <input
           type="email"
