@@ -68,7 +68,7 @@ export default async function AdminGuestDetailPage({ params }: { params: { id: s
               {guest.rsvpStatus === "no" && "No asistirá"}
             </dd>
             <dt>Check-in</dt>
-            <dd>{guest.checkedIn ? `Sí · ${formatDate(guest.checkedInAt)}` : "No ha llegado"}</dd>
+            <dd>{guest.checkedIn ? `Sí · ${formatDate(guest.checkedInAt)}` : "Pendiente"}</dd>
             <dt>Acompañantes confirmados</dt>
             <dd>
               {guest.companions.length > 0 ? (
@@ -86,7 +86,7 @@ export default async function AdminGuestDetailPage({ params }: { params: { id: s
                         </span>
                         <br />
                         <span className={styles.companionOf}>
-                          {companion.checkedIn ? `Check-in · ${formatDate(companion.checkedInAt)}` : "No ha llegado"}
+                          {companion.checkedIn ? `Check-in · ${formatDate(companion.checkedInAt)}` : "Pendiente"}
                         </span>
                       </span>
                     </li>

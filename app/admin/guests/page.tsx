@@ -1,4 +1,10 @@
-import { buildCompanionConfirmationResendLink, buildGuestConfirmationResendLink, buildGuestInviteLink, listGuests } from "@/lib/guests";
+import {
+  buildCompanionConfirmationResendLink,
+  buildGuestConfirmationResendLink,
+  buildGuestInviteLink,
+  buildGuestReminderLink,
+  listGuests,
+} from "@/lib/guests";
 import { UploadCsvForm } from "./UploadCsvForm";
 import { AddGuestForm } from "./AddGuestForm";
 import { GuestTable, type GuestRowView } from "./GuestTable";
@@ -10,6 +16,7 @@ export default async function AdminGuestsPage() {
     ...g,
     inviteLink: buildGuestInviteLink(g),
     resendLink: buildGuestConfirmationResendLink(g),
+    reminderLink: buildGuestReminderLink(g),
     companions: g.companions.map((c) => ({ ...c, resendLink: buildCompanionConfirmationResendLink(g, c.name) })),
   }));
 

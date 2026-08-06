@@ -78,8 +78,9 @@ function buildConfirmationEmailHtml(guestName: string, status: "yes" | "no", edi
 
         <div style="padding: 0 32px 28px; text-align: center;">
           <p style="margin: 0; font-size: 13px; line-height: 1.6; color: ${brandColors.mutedLight};">
-            Adjunto encontrarás tu comprobante en PDF con el resumen del evento y tu código QR de
-            acceso — preséntalo (impreso o desde tu celular) al llegar. ¡Nos vemos pronto!
+            Adjunto encontrarás tu comprobante en PDF con el resumen del evento y tu código QR de acceso.
+            Al llegar, presentalo desde tu celular o impreso para poder ingresar.
+            ¡Nos vemos pronto!
           </p>
         </div>`
       : "";

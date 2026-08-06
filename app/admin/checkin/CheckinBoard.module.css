@@ -1,0 +1,127 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stat {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 18px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.statNumber {
+  font: 600 28px/1 var(--font-label);
+  color: var(--color-ink);
+}
+
+.statLabel {
+  font: 400 13px/1.4 var(--font-label);
+  color: var(--color-muted);
+}
+
+.search {
+  font: 400 16px/1.4 var(--font-label);
+  padding: 14px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: #fff;
+  max-width: 420px;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 720px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.columnTitle {
+  font: 500 13px/1.4 var(--font-label);
+  color: var(--color-ink);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tableWrap {
+  overflow-y: auto;
+  max-height: 70vh;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.row td {
+  padding: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.row:last-child td {
+  border-bottom: none;
+}
+
+.rowMain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.rowName {
+  font: 500 14px/1.4 var(--font-label);
+  color: var(--color-ink);
+}
+
+.rowMeta {
+  font: 400 12px/1.4 var(--font-label);
+  color: var(--color-muted-light);
+}
+
+.toggleButton {
+  font: 500 11px/1 var(--font-label);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.toggleButton:hover {
+  color: var(--color-ink);
+  border-color: var(--color-taupe);
+}
+.toggleButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.empty {
+  text-align: center;
+  color: var(--color-muted-light);
+  padding: 20px;
+  font: 400 13px/1.4 var(--font-label);
+}

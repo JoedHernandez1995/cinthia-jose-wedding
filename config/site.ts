@@ -50,18 +50,8 @@ export const WHATSAPP_NUMBER = "50499999999";
 export const plannerWhatsAppNumber = "50488888888";
 
 export const whatsappMessages = {
-  // The wedding planner only sees these messages as raw WhatsApp texts, so the guest's name (and,
-  // for a group RSVP, their family label + companion names) must always be spelled out in the text
-  // itself — she has no other way to know who's writing her.
-  rsvpYes: (guestName: string, familyLabel: string | null, companionNames: string[]): string => {
-    if (companionNames.length === 0) {
-      return `Hola, soy ${guestName} confirmando que asistiré a la boda de José & Cinthia el 7 de noviembre.`;
-    }
-    const namePart = familyLabel ? `${guestName} de la ${familyLabel}` : guestName;
-    return `Hola, soy ${namePart} confirmando que asistiremos junto con ${companionNames.join(", ")}, a la boda de José & Cinthia el 7 de noviembre.`;
-  },
-  rsvpNo: (guestName: string): string =>
-    `Hola, soy ${guestName}. Lamentablemente no podré asistir a la boda de José & Cinthia el 7 de noviembre. ¡Muchas felicidades a ambos!`,
+  // The wedding planner only sees this message as a raw WhatsApp text, so the guest's name must
+  // always be spelled out in the text itself — she has no other way to know who's writing her.
   rsvpLastMinute: (guestName: string): string =>
     `Hola, soy ${guestName}. La ventana de confirmación para la boda de José & Cinthia ya cerró, pero necesito avisar de un cambio de último momento en mi respuesta.`,
   dressCodeQuestion: "¡Hola! Tengo una duda sobre el atuendo para la boda de José & Cinthia.",

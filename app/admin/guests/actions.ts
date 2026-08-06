@@ -6,6 +6,7 @@ import {
   DuplicateGuestError,
   GuestValidationError,
   RsvpValidationError,
+  bulkMarkInviteSent,
   createGuest,
   deleteCompanion,
   deleteGuest,
@@ -127,6 +128,15 @@ export async function deleteGuestAction(formData: FormData): Promise<void> {
 export async function markInviteSentAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (id) await markInviteSent(id);
+  revalidatePath("/admin/guests");
+}
+
+export async function bulkMarkInviteSentAction(formData: FormData): Promise<void> {
+  const ids = String(formData.get("ids") ?? "")
+    .split(",")
+    .filter(Boolean);
+  if (ids.length === 0) return;
+  await bulkMarkInviteSent(ids);
   revalidatePath("/admin/guests");
 }
 

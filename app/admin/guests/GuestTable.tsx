@@ -1,12 +1,13 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Guest, GuestCompanion } from "@/types/guest";
 import { useAdminToast } from "@/components/admin/Toast";
 import { useAdminConfirm } from "@/components/admin/ConfirmDialog";
 import { formatDateTime as formatDate } from "@/lib/formatDate";
 import {
+  bulkMarkInviteSentAction,
   deleteCompanionAction,
   deleteGuestAction,
   markInviteSentAction,
@@ -15,6 +16,7 @@ import {
   toggleCompanionCheckedInAction,
   toggleGuestCheckedInAction,
 } from "./actions";
+import { BulkSendQueue } from "./BulkSendQueue";
 import styles from "./GuestTable.module.css";
 
 type PendingAction = "whatsapp" | "regenerate" | "delete" | "resend" | "checkin" | "rename";
@@ -26,8 +28,11 @@ export interface CompanionRowView extends GuestCompanion {
 export interface GuestRowView extends Omit<Guest, "companions"> {
   inviteLink: string;
   resendLink: string;
+  reminderLink: string;
   companions: CompanionRowView[];
 }
+
+type QueueState = { kind: "invite" | "reminder"; guests: GuestRowView[]; excludedCount: number } | null;
 
 type StatusFilter = "all" | "pending" | "yes" | "no" | "not_sent";
 type SideFilter = "all" | "novio" | "novia" | "sin_definir";
@@ -42,6 +47,9 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
   const [pending, setPending] = useState<{ id: string; action: PendingAction } | null>(null);
   const [editingCompanionId, setEditingCompanionId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [queue, setQueue] = useState<QueueState>(null);
+  const [bulkMarkPending, setBulkMarkPending] = useState(false);
 
   async function handleSendWhatsApp(guest: GuestRowView) {
     // Open synchronously (before any await) so popup blockers don't swallow it.
@@ -201,6 +209,65 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
     });
   }, [guests, search, statusFilter, sideFilter]);
 
+  // Switching a filter can hide a previously-selected guest — drop it from the selection so it
+  // isn't silently bulk-acted on while out of view.
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      const filteredIds = new Set(filtered.map((g) => g.id));
+      const next = new Set([...prev].filter((id) => filteredIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filtered]);
+
+  const selectedGuests = useMemo(() => filtered.filter((g) => selectedIds.has(g.id)), [filtered, selectedIds]);
+  const allFilteredSelected = filtered.length > 0 && selectedGuests.length === filtered.length;
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllFiltered() {
+    setSelectedIds(allFilteredSelected ? new Set() : new Set(filtered.map((g) => g.id)));
+  }
+
+  function handleSendReminder(guest: GuestRowView) {
+    window.open(guest.reminderLink, "_blank", "noopener");
+  }
+
+  function openInviteQueue() {
+    setQueue({ kind: "invite", guests: selectedGuests, excludedCount: 0 });
+  }
+
+  function openReminderQueue() {
+    const eligible = selectedGuests.filter((g) => g.rsvpStatus === "pending");
+    setQueue({ kind: "reminder", guests: eligible, excludedCount: selectedGuests.length - eligible.length });
+  }
+
+  async function handleBulkMarkSent() {
+    const confirmed = await confirm(
+      `¿Marcar la invitación de ${selectedGuests.length} invitado(s) como enviada? Esto no abre WhatsApp, solo actualiza el registro.`,
+    );
+    if (!confirmed) return;
+    setBulkMarkPending(true);
+    try {
+      const formData = new FormData();
+      formData.set("ids", selectedGuests.map((g) => g.id).join(","));
+      await bulkMarkInviteSentAction(formData);
+      router.refresh();
+      showToast(`Invitación marcada como enviada para ${selectedGuests.length} invitado(s).`);
+      setSelectedIds(new Set());
+    } catch {
+      showToast("No se pudo actualizar la invitación en lote.", "error");
+    } finally {
+      setBulkMarkPending(false);
+    }
+  }
+
   return (
     <div>
       <div className={styles.controls}>
@@ -232,10 +299,36 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
         </span>
       </div>
 
+      {selectedGuests.length > 0 && (
+        <div className={styles.bulkBar}>
+          <span className={styles.bulkCount}>{selectedGuests.length} seleccionado(s)</span>
+          <button type="button" className={styles.actionButton} onClick={openInviteQueue}>
+            Enviar invitación ({selectedGuests.length})
+          </button>
+          <button type="button" className={styles.actionButton} onClick={openReminderQueue}>
+            Enviar recordatorio ({selectedGuests.filter((g) => g.rsvpStatus === "pending").length})
+          </button>
+          <button type="button" className={styles.actionButton} disabled={bulkMarkPending} onClick={handleBulkMarkSent}>
+            {bulkMarkPending ? "Guardando…" : `Marcar invitación como enviada (${selectedGuests.length})`}
+          </button>
+          <button type="button" className={styles.actionLink} onClick={() => setSelectedIds(new Set())}>
+            Cancelar selección
+          </button>
+        </div>
+      )}
+
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
             <tr>
+              <th>
+                <input
+                  type="checkbox"
+                  checked={allFilteredSelected}
+                  onChange={toggleSelectAllFiltered}
+                  aria-label="Seleccionar todos los filtrados"
+                />
+              </th>
               <th>Nombre</th>
               <th>Lado</th>
               <th>Procedencia</th>
@@ -252,6 +345,14 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
             {filtered.map((guest) => (
               <Fragment key={guest.id}>
                 <tr>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(guest.id)}
+                      onChange={() => toggleSelected(guest.id)}
+                      aria-label={`Seleccionar a ${guest.name}`}
+                    />
+                  </td>
                   <td>
                     <a href={`/admin/guests/${guest.id}`} className={styles.nameLink}>
                       {guest.name}
@@ -316,6 +417,11 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                     >
                       {pending?.id === guest.id && pending.action === "whatsapp" ? "Enviando…" : "Enviar WhatsApp"}
                     </button>
+                    {guest.rsvpStatus === "pending" && (
+                      <button type="button" className={styles.actionLink} onClick={() => handleSendReminder(guest)}>
+                        Enviar recordatorio
+                      </button>
+                    )}
                     {guest.rsvpStatus === "yes" && (
                       <>
                         <button
@@ -361,7 +467,7 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
 
                 {guest.companions.length > 0 && (
                   <tr className={styles.companionSubRow}>
-                    <td colSpan={10}>
+                    <td colSpan={11}>
                       <table className={styles.subTable}>
                         <thead>
                           <tr>
@@ -408,7 +514,7 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                                 {companion.checkedIn ? (
                                   <span className={styles.badgeYes}>Sí · {formatDate(companion.checkedInAt)}</span>
                                 ) : (
-                                  <span className={styles.badgePending}>No ha llegado</span>
+                                  <span className={styles.badgePending}>Pendiente</span>
                                 )}
                               </td>
                               <td className={styles.actions}>
@@ -462,7 +568,7 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={10} className={styles.empty}>
+                <td colSpan={11} className={styles.empty}>
                   No hay invitados que coincidan.
                 </td>
               </tr>
@@ -470,6 +576,15 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
           </tbody>
         </table>
       </div>
+
+      {queue && (
+        <BulkSendQueue
+          kind={queue.kind}
+          guests={queue.guests}
+          excludedCount={queue.excludedCount}
+          onClose={() => setQueue(null)}
+        />
+      )}
     </div>
   );
 }

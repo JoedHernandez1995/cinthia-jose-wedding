@@ -1,0 +1,97 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(43, 41, 38, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 440px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 8px;
+  padding: 22px 20px;
+  box-shadow: 0 20px 40px rgba(60, 50, 35, 0.25);
+}
+
+.title {
+  font: 500 15px/1.4 var(--font-label);
+  color: var(--color-ink);
+  margin: 0 0 4px;
+}
+
+.note {
+  font: 400 12px/1.5 var(--font-label);
+  color: var(--color-muted-light);
+  margin: 0 0 16px;
+}
+
+.list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.rowName {
+  font: 400 13px/1.4 var(--font-label);
+  color: var(--color-ink);
+}
+
+.sendButton {
+  font: 500 11px/1 var(--font-label);
+  padding: 7px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sendButton:hover {
+  color: var(--color-ink);
+  border-color: var(--color-taupe);
+}
+.sendButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sentLabel {
+  font: 500 11px/1 var(--font-label);
+  color: #3c6b3a;
+  white-space: nowrap;
+}
+
+.closeButton {
+  align-self: flex-end;
+  font: 500 12px/1 var(--font-label);
+  letter-spacing: 0.03em;
+  color: var(--color-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.closeButton:hover {
+  color: var(--color-ink);
+}

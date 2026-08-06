@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { sendGuestConfirmation } from "@/lib/confirmation";
+import { wedding } from "@/config/site";
 import type {
   ActivityEntry,
   CheckinResult,
@@ -261,6 +262,17 @@ export async function markInviteSent(id: string): Promise<void> {
     .from("guests")
     .update({ invite_sent: true, invite_sent_at: new Date().toISOString() })
     .eq("id", id);
+  if (error) throw error;
+}
+
+/** Same as `markInviteSent`, for many guests in one round trip — the admin table's bulk "mark as sent" action. */
+export async function bulkMarkInviteSent(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase
+    .from("guests")
+    .update({ invite_sent: true, invite_sent_at: new Date().toISOString() })
+    .in("id", ids);
   if (error) throw error;
 }
 
@@ -808,6 +820,27 @@ export function buildGuestInviteLink(
   const body = isPlural
     ? "Queremos compartir con ustedes algo muy especial: su invitación a nuestra boda. Nos hará mucha ilusión tenerlos con nosotros en este día tan importante."
     : "Queremos compartir contigo algo muy especial: tu invitación a nuestra boda. Nos hará mucha ilusión tenerte con nosotros en este día tan importante.";
+
+  const message = `${greetingName}\n\n${body}\n\nJosé & Cinthia\n\n${personalUrl}`;
+  return buildWhatsAppLink(guest.whatsappNumber, message);
+}
+
+/**
+ * Builds a `wa.me` link nudging a guest who hasn't RSVP'd yet, pointing at their personal
+ * `/i/[token]` page (not `/comprobante` — they haven't confirmed, so there's no comprobante to
+ * resend). Same displayName/plural greeting rule as `buildGuestInviteLink`.
+ */
+export function buildGuestReminderLink(
+  guest: Pick<Guest, "name" | "displayName" | "token" | "whatsappNumber" | "partySizeAllowed">,
+): string {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const personalUrl = `${siteUrl}/i/${guest.token}`;
+  const greetingName = guest.displayName || guest.name;
+  const isPlural = Boolean(guest.displayName) && guest.partySizeAllowed > 1;
+
+  const body = isPlural
+    ? `Todavía no hemos recibido su confirmación para nuestra boda. Agradeceríamos que nos confirmen antes del ${wedding.rsvpDeadlineLabel}.`
+    : `Todavía no hemos recibido tu confirmación para nuestra boda. Agradeceríamos que nos confirmes antes del ${wedding.rsvpDeadlineLabel}.`;
 
   const message = `${greetingName}\n\n${body}\n\nJosé & Cinthia\n\n${personalUrl}`;
   return buildWhatsAppLink(guest.whatsappNumber, message);

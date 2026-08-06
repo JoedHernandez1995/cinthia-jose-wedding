@@ -30,6 +30,24 @@
   white-space: nowrap;
 }
 
+.bulkBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.bulkCount {
+  font: 500 12px/1.4 var(--font-label);
+  color: var(--color-ink);
+  margin-right: 4px;
+}
+
 .tableWrap {
   overflow-x: auto;
   border: 1px solid var(--color-border);

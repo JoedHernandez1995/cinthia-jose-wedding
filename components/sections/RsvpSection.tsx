@@ -64,16 +64,6 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
     setCompanionNames(result.companionNames);
     setConfirmationSent(result.confirmationSent);
     setMode("confirmed");
-
-    // Only treat displayName as a real "family label" when it's distinct from the guest's own
-    // name — a lone guest with no group display name set would otherwise read as "Jane Doe de la
-    // Jane Doe", which is nonsensical.
-    const familyLabel = guest.displayName !== guest.name ? guest.displayName : null;
-    const plannerMessage =
-      nextStatus === "yes"
-        ? whatsappMessages.rsvpYes(guest.name, familyLabel, result.companionNames)
-        : whatsappMessages.rsvpNo(guest.name);
-    window.open(buildWhatsAppLink(plannerWhatsAppNumber, plannerMessage), "_blank");
   }
 
   function handleYesClick() {
@@ -114,6 +104,20 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
             </>
           )}
         </div>
+      )}
+
+      {mode === "confirmed" && status === "yes" && (
+        <p className={styles.nextStepsNote}>
+          Antes de irte, revisá el <a href={`#${sectionIds.vestimenta}`}>código de vestimenta</a>
+          {guest.guestLocation === "extranjero" ? (
+            <>
+              {" "}
+              y nuestras <a href={`#${sectionIds.recomendaciones}`}>recomendaciones</a> para tu viaje.
+            </>
+          ) : (
+            " para que estés preparado para celebrar con nosotros."
+          )}
+        </p>
       )}
 
       {mode === "confirmed" && status === "yes" && !confirmationSent && (
