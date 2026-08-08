@@ -55,6 +55,8 @@ export function EditGuestForm({ guest }: { guest: Guest }) {
           <option value="">Sin definir</option>
           <option value="novio">Invitado del novio</option>
           <option value="novia">Invitado de la novia</option>
+          <option value="padres_novio">Invitado de los padres del novio</option>
+          <option value="padres_novia">Invitado de los padres de la novia</option>
         </select>
       </label>
       <label className={styles.label}>

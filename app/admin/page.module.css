@@ -36,6 +36,12 @@
   margin-top: 6px;
 }
 
+.linkRow {
+  display: flex;
+  gap: 20px;
+  margin-top: 8px;
+}
+
 .link {
   font: 500 13px/1 var(--font-label);
   color: var(--color-taupe);

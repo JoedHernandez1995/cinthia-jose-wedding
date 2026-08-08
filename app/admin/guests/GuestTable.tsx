@@ -34,16 +34,30 @@ export interface GuestRowView extends Omit<Guest, "companions"> {
 
 type QueueState = { kind: "invite" | "reminder"; guests: GuestRowView[]; excludedCount: number } | null;
 
-type StatusFilter = "all" | "pending" | "yes" | "no" | "not_sent";
-type SideFilter = "all" | "novio" | "novia" | "sin_definir";
+type SideTab = "all" | "novio" | "novia" | "padres_novio" | "padres_novia";
+
+// "Todos" (was "Ambos") — no longer just two sides, so "both" stopped being accurate once the
+// parent categories were added.
+const sideTabs: { key: SideTab; label: string }[] = [
+  { key: "all", label: "Todos" },
+  { key: "novio", label: "Novio" },
+  { key: "novia", label: "Novia" },
+  { key: "padres_novio", label: "Padres Novio" },
+  { key: "padres_novia", label: "Padres Novia" },
+];
+
+interface GuestGroup {
+  key: string;
+  label: string;
+  rows: GuestRowView[];
+}
 
 export function GuestTable({ guests }: { guests: GuestRowView[] }) {
   const router = useRouter();
   const { showToast } = useAdminToast();
   const confirm = useAdminConfirm();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [sideFilter, setSideFilter] = useState<SideFilter>("all");
+  const [sideTab, setSideTab] = useState<SideTab>("all");
   const [pending, setPending] = useState<{ id: string; action: PendingAction } | null>(null);
   const [editingCompanionId, setEditingCompanionId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -198,16 +212,34 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
     return guests.filter((g) => {
       const matchesCompanion = g.companionNames.some((name) => name.toLowerCase().includes(q));
       if (q && !g.name.toLowerCase().includes(q) && !g.whatsappNumber.includes(q) && !matchesCompanion) return false;
-      if (statusFilter === "not_sent") {
-        if (g.inviteSent) return false;
-      } else if (statusFilter !== "all" && g.rsvpStatus !== statusFilter) {
-        return false;
-      }
-      const side = g.invitedBy ?? "sin_definir";
-      if (sideFilter !== "all" && side !== sideFilter) return false;
+      // "Todos" (all) also includes guests with no side assigned yet — they only ever show up here,
+      // never under any of the 4 specific-side tabs, since none is an exact match for them.
+      if (sideTab !== "all" && g.invitedBy !== sideTab) return false;
       return true;
     });
-  }, [guests, search, statusFilter, sideFilter]);
+  }, [guests, search, sideTab]);
+
+  // Same 4 buckets in every tab, in a fixed priority order: the "done" bucket first, then the
+  // warmest lead (already opened the invitation but hasn't answered), then the coldest lead, then
+  // guests who already declined.
+  const groups: GuestGroup[] = useMemo(() => {
+    const confirmed: GuestRowView[] = [];
+    const pendingViewed: GuestRowView[] = [];
+    const pendingNotViewed: GuestRowView[] = [];
+    const declined: GuestRowView[] = [];
+    for (const g of filtered) {
+      if (g.rsvpStatus === "yes") confirmed.push(g);
+      else if (g.rsvpStatus === "no") declined.push(g);
+      else if (g.viewCount > 0) pendingViewed.push(g);
+      else pendingNotViewed.push(g);
+    }
+    return [
+      { key: "confirmed", label: "Confirmados", rows: confirmed },
+      { key: "pendingViewed", label: "Pendientes · vieron la invitación", rows: pendingViewed },
+      { key: "pendingNotViewed", label: "Pendientes · no han visto", rows: pendingNotViewed },
+      { key: "declined", label: "No asistirán", rows: declined },
+    ];
+  }, [filtered]);
 
   // Switching a filter can hide a previously-selected guest — drop it from the selection so it
   // isn't silently bulk-acted on while out of view.
@@ -270,6 +302,19 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
 
   return (
     <div>
+      <div className={styles.tabs}>
+        {sideTabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            className={`${styles.tab} ${sideTab === tab.key ? styles.tabActive : ""}`}
+            onClick={() => setSideTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className={styles.controls}>
         <input
           className={styles.search}
@@ -277,23 +322,6 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <select
-          className={styles.select}
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-        >
-          <option value="all">Todos</option>
-          <option value="pending">Pendientes</option>
-          <option value="yes">Confirmados</option>
-          <option value="no">No asistirán</option>
-          <option value="not_sent">Invitación no enviada</option>
-        </select>
-        <select className={styles.select} value={sideFilter} onChange={(e) => setSideFilter(e.target.value as SideFilter)}>
-          <option value="all">Ambos lados</option>
-          <option value="novio">Lado del novio</option>
-          <option value="novia">Lado de la novia</option>
-          <option value="sin_definir">Sin definir</option>
-        </select>
         <span className={styles.count}>
           {filtered.length} de {guests.length}
         </span>
@@ -342,9 +370,30 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((guest) => (
-              <Fragment key={guest.id}>
-                <tr>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={11} className={styles.empty}>
+                  No hay invitados que coincidan.
+                </td>
+              </tr>
+            ) : (
+              groups.map((group) => (
+                <Fragment key={group.key}>
+                  <tr className={styles.groupHeaderRow}>
+                    <td colSpan={11}>
+                      {group.label} ({group.rows.length})
+                    </td>
+                  </tr>
+                  {group.rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={11} className={styles.groupEmpty}>
+                        Sin invitados en este grupo.
+                      </td>
+                    </tr>
+                  ) : (
+                    group.rows.map((guest) => (
+                      <Fragment key={guest.id}>
+                        <tr>
                   <td>
                     <input
                       type="checkbox"
@@ -361,6 +410,8 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                   <td>
                     {guest.invitedBy === "novio" && <span className={styles.badgeSent}>Novio</span>}
                     {guest.invitedBy === "novia" && <span className={styles.badgeYes}>Novia</span>}
+                    {guest.invitedBy === "padres_novio" && <span className={styles.badgeSent}>Padres Novio</span>}
+                    {guest.invitedBy === "padres_novia" && <span className={styles.badgeYes}>Padres Novia</span>}
                     {!guest.invitedBy && <span className={styles.badgePending}>Sin definir</span>}
                   </td>
                   <td>
@@ -569,13 +620,10 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                   </tr>
                 )}
               </Fragment>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={11} className={styles.empty}>
-                  No hay invitados que coincidan.
-                </td>
-              </tr>
+                    ))
+                  )}
+                </Fragment>
+              ))
             )}
           </tbody>
         </table>

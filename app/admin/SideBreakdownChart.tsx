@@ -4,6 +4,8 @@ import styles from "./SideBreakdownChart.module.css";
 const sideLabels: Record<SideBreakdown["side"], string> = {
   novio: "Lado del novio",
   novia: "Lado de la novia",
+  padres_novio: "Padres del novio",
+  padres_novia: "Padres de la novia",
   sin_definir: "Sin definir",
 };
 
@@ -26,11 +28,18 @@ export function SideBreakdownChart({ data }: { data: SideBreakdown[] }) {
             <span className={styles.rowTotal}>{d.total} invitado{d.total === 1 ? "" : "s"}</span>
           </div>
           {d.total > 0 ? (
-            <div className={styles.bar} role="img" aria-label={`${sideLabels[d.side]}: ${d.yes} confirmados, ${d.no} no asistirán, ${d.pending} pendientes`}>
-              {d.yes > 0 && <div className={styles.segYes} style={{ flexGrow: d.yes }} />}
-              {d.no > 0 && <div className={styles.segNo} style={{ flexGrow: d.no }} />}
-              {d.pending > 0 && <div className={styles.segPending} style={{ flexGrow: d.pending }} />}
-            </div>
+            <>
+              <div className={styles.bar} role="img" aria-label={`${sideLabels[d.side]}: ${d.yes} confirmados, ${d.no} no asistirán, ${d.pending} pendientes`}>
+                {d.yes > 0 && <div className={styles.segYes} style={{ flexGrow: d.yes }} />}
+                {d.no > 0 && <div className={styles.segNo} style={{ flexGrow: d.no }} />}
+                {d.pending > 0 && <div className={styles.segPending} style={{ flexGrow: d.pending }} />}
+              </div>
+              <div className={styles.rowCounts} aria-hidden="true">
+                <span>{d.yes} confirmados</span>
+                <span>{d.no} no asistirán</span>
+                <span>{d.pending} pendientes</span>
+              </div>
+            </>
           ) : (
             <div className={styles.barEmpty} />
           )}

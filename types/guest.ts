@@ -1,7 +1,7 @@
 export type RsvpStatus = "pending" | "yes" | "no";
 
-/** Which side of the couple invited this guest. Null means not yet assigned. */
-export type InvitedBy = "novio" | "novia";
+/** Which side invited this guest — the couple themselves, or one set of parents. Null means not yet assigned. */
+export type InvitedBy = "novio" | "novia" | "padres_novio" | "padres_novia";
 
 /** Local (Honduras) vs. traveling from abroad — gates Ubicación/Recomendaciones and the gift-account list. Null (not yet assigned) is treated as local. */
 export type GuestLocation = "local" | "extranjero";

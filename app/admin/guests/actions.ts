@@ -22,9 +22,11 @@ import {
 } from "@/lib/guests";
 import type { CsvUploadResult, GuestLocation, InvitedBy, RsvpStatus } from "@/types/guest";
 
+const INVITED_BY_VALUES: InvitedBy[] = ["novio", "novia", "padres_novio", "padres_novia"];
+
 function parseInvitedBy(raw: FormDataEntryValue | null): InvitedBy | null {
   const value = String(raw ?? "");
-  return value === "novio" || value === "novia" ? value : null;
+  return (INVITED_BY_VALUES as string[]).includes(value) ? (value as InvitedBy) : null;
 }
 
 function parseGuestLocation(raw: FormDataEntryValue | null): GuestLocation | null {

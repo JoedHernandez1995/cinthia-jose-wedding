@@ -8,7 +8,7 @@ create table if not exists guests (
   token text not null unique default encode(gen_random_bytes(6), 'hex'), -- short & shareable over WhatsApp
   name text not null,
   whatsapp_number text not null,
-  invited_by text check (invited_by in ('novio', 'novia')), -- which side invited this guest; null = not yet assigned
+  invited_by text check (invited_by in ('novio', 'novia', 'padres_novio', 'padres_novia')), -- which side invited this guest; null = not yet assigned
   guest_location text check (guest_location in ('local', 'extranjero')), -- local vs. traveling from abroad; null = not yet assigned, treated as local
   party_size_allowed int not null default 1 check (party_size_allowed >= 1), -- total people allowed, including the named guest
   invite_sent boolean not null default false,
@@ -30,7 +30,15 @@ create unique index if not exists guests_import_key_idx on guests (import_key);
 create index if not exists guests_token_idx on guests (token);
 
 -- Migration for databases created before `invited_by` existed — no-op on a fresh install.
-alter table guests add column if not exists invited_by text check (invited_by in ('novio', 'novia'));
+alter table guests add column if not exists invited_by text check (invited_by in ('novio', 'novia', 'padres_novio', 'padres_novia'));
+
+-- Widens `invited_by` to also distinguish guests invited by either set of parents, as their own
+-- sides parallel to novio/novia (not nested under them). No-op on a fresh install (the column
+-- already allows these values above); this is what actually takes effect on a database created
+-- before this change, where `invited_by`'s check constraint only allowed 'novio'/'novia'.
+alter table guests drop constraint if exists guests_invited_by_check;
+alter table guests add constraint guests_invited_by_check
+  check (invited_by in ('novio', 'novia', 'padres_novio', 'padres_novia'));
 
 -- Migration: shorten the token generated for newly-created guests (was 32
 -- hex chars, a mess to share over WhatsApp — now 12). Only affects the

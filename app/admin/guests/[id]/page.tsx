@@ -49,6 +49,8 @@ export default async function AdminGuestDetailPage({ params }: { params: { id: s
             <dd>
               {guest.invitedBy === "novio" && "Invitado del novio"}
               {guest.invitedBy === "novia" && "Invitado de la novia"}
+              {guest.invitedBy === "padres_novio" && "Invitado de los padres del novio"}
+              {guest.invitedBy === "padres_novia" && "Invitado de los padres de la novia"}
               {!guest.invitedBy && "Sin definir"}
             </dd>
             <dt>Total de personas permitidas</dt>

@@ -60,7 +60,7 @@ export function InvitationPage({ guest: initialGuest }: InvitationPageProps) {
         <RsvpSection guest={guest} />
         {guest.guestLocation === "extranjero" && <LocationSection />}
         <DressCodeSection />
-        <FaqSection />
+        <FaqSection guest={guest} />
         <GiftSection guest={guest} />
         {guest.guestLocation === "extranjero" && <RecommendationsSection guest={guest} />}
         <ClosingImageSection />

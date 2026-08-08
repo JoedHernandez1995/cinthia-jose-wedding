@@ -47,7 +47,7 @@ export const calendarEvent = {
 };
 
 // Contact placeholder — replace with the real WhatsApp number before shipping.
-export const WHATSAPP_NUMBER = "50499999999";
+export const WHATSAPP_NUMBER = "50497740066";
 
 // Wedding planner's WhatsApp number — receives a courtesy notification after
 // each guest RSVP. Placeholder, replace before shipping.
@@ -59,6 +59,13 @@ export const whatsappMessages = {
   rsvpLastMinute: (guestName: string): string =>
     `Hola, soy ${guestName}. La confirmación para la boda de Cinthia & José ya cerró, pero necesito avisarles de un cambio de último momento en mi respuesta.`,
   dressCodeQuestion: "¡Hola! Tengo una duda sobre el código de vestimenta para la boda de Cinthia & José.",
+  // Same "who's writing" reasoning as rsvpLastMinute — go by the family display name only when one
+  // is actually set AND there's room for others (partySizeAllowed > 1); otherwise use the guest's
+  // own name, same rule used everywhere else this distinction matters.
+  faqContactQuestion: (guestName: string, displayName: string, isFamily: boolean): string =>
+    isFamily
+      ? `Hola, les escribe ${displayName} y tengo una duda sobre la boda de Cinthia & José.`
+      : `Hola, mi nombre es ${guestName} y tengo una duda sobre la boda de Cinthia & José.`,
 };
 
 export const faqContact = {

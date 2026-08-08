@@ -21,6 +21,9 @@ import type {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** The four sides a guest can be invited from — the couple themselves, or either set of parents. */
+const INVITED_BY_VALUES: InvitedBy[] = ["novio", "novia", "padres_novio", "padres_novia"];
+
 /** Raw `guests` row shape as it comes back from Supabase (snake_case). */
 interface GuestRow {
   id: string;
@@ -437,11 +440,14 @@ export function parseGuestCsvRows(
     }
     let invitedBy: InvitedBy | null = null;
     if (invitedByRaw !== "") {
-      if (invitedByRaw !== "novio" && invitedByRaw !== "novia") {
-        errors.push({ row: rowNumber, reason: `"invited_by" debe ser "novio" o "novia" (o vacío): "${raw.invited_by}".` });
+      if (!INVITED_BY_VALUES.includes(invitedByRaw as InvitedBy)) {
+        errors.push({
+          row: rowNumber,
+          reason: `"invited_by" debe ser uno de: ${INVITED_BY_VALUES.join(", ")} (o vacío): "${raw.invited_by}".`,
+        });
         return;
       }
-      invitedBy = invitedByRaw;
+      invitedBy = invitedByRaw as InvitedBy;
     }
     let guestLocation: GuestLocation | null = null;
     if (guestLocationRaw !== "") {
@@ -494,15 +500,12 @@ export async function upsertGuestsFromCsv(rows: GuestCsvRow[]): Promise<Omit<Csv
   // explicitly specifies them, via separate targeted updates — so a
   // re-upload with those columns blank never silently clears a value set
   // later via the admin edit form.
-  const novioKeys = rows.filter((r) => r.invitedBy === "novio").map(importKeyOf);
-  const noviaKeys = rows.filter((r) => r.invitedBy === "novia").map(importKeyOf);
-  if (novioKeys.length > 0) {
-    const { error: novioError } = await supabase.from("guests").update({ invited_by: "novio" }).in("import_key", novioKeys);
-    if (novioError) throw novioError;
-  }
-  if (noviaKeys.length > 0) {
-    const { error: noviaError } = await supabase.from("guests").update({ invited_by: "novia" }).in("import_key", noviaKeys);
-    if (noviaError) throw noviaError;
+  for (const side of INVITED_BY_VALUES) {
+    const keys = rows.filter((r) => r.invitedBy === side).map(importKeyOf);
+    if (keys.length > 0) {
+      const { error: sideError } = await supabase.from("guests").update({ invited_by: side }).in("import_key", keys);
+      if (sideError) throw sideError;
+    }
   }
 
   const localKeys = rows.filter((r) => r.guestLocation === "local").map(importKeyOf);
@@ -815,7 +818,7 @@ export interface SideBreakdown {
 /** Guest counts by side (novio/novia/unassigned), broken down by RSVP status — feeds the dashboard chart. */
 export async function getGuestSideBreakdown(): Promise<SideBreakdown[]> {
   const guests = await listGuests();
-  const sides: (InvitedBy | "sin_definir")[] = ["novio", "novia", "sin_definir"];
+  const sides: (InvitedBy | "sin_definir")[] = [...INVITED_BY_VALUES, "sin_definir"];
 
   return sides.map((side) => {
     const inSide = guests.filter((g) => (g.invitedBy ?? "sin_definir") === side);

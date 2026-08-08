@@ -36,7 +36,7 @@ export function UploadCsvForm() {
       <h2 className={styles.cardHeading}>Importar CSV</h2>
       <p className={styles.cardHint}>
         Columnas: name, display_name (opcional), whatsapp_number, party_size_allowed (total de personas, incluyendo al
-        invitado), invited_by (opcional: novio/novia)
+        invitado), invited_by (opcional: novio/novia/padres_novio/padres_novia)
       </p>
       <input type="file" name="file" accept=".csv" required className={styles.fileInput} />
       <SubmitButton label="Subir" pendingLabel="Subiendo…" className={styles.primaryButton} />

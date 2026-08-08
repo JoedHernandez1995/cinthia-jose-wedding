@@ -1,13 +1,26 @@
 import { Reveal } from "@/components/ui/Reveal";
 import { GoldButtonLink } from "@/components/ui/GoldButtonLink";
-import { WHATSAPP_NUMBER, faqContact, faqs, sectionIds } from "@/config/site";
+import { WHATSAPP_NUMBER, faqContact, faqs, sectionIds, whatsappMessages } from "@/config/site";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
+import type { GuestViewModel } from "@/types/guest";
 import styles from "./FaqSection.module.css";
 
-const whatsappContactLink = buildWhatsAppLink(WHATSAPP_NUMBER);
+interface FaqSectionProps {
+  guest: GuestViewModel;
+}
 
 /** "Preguntas Frecuentes" section: a WhatsApp contact prompt followed by the FAQ list. */
-export function FaqSection() {
+export function FaqSection({ guest }: FaqSectionProps) {
+  // `guest.displayName` is already resolved (falls back to `guest.name` when no family label is
+  // set), so comparing it against `guest.name` is how we detect a real display name is in play —
+  // same rule as everywhere else this distinction matters: only go by it when there's also room
+  // for others in the party.
+  const isFamily = guest.displayName !== guest.name && guest.partySizeAllowed > 1;
+  const whatsappContactLink = buildWhatsAppLink(
+    WHATSAPP_NUMBER,
+    whatsappMessages.faqContactQuestion(guest.name, guest.displayName, isFamily),
+  );
+
   return (
     <section id={sectionIds.faq} className={styles.section}>
       <Reveal>
