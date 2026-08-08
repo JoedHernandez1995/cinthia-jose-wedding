@@ -8,6 +8,7 @@ import { useAdminConfirm } from "@/components/admin/ConfirmDialog";
 import { formatDateTime as formatDate } from "@/lib/formatDate";
 import {
   bulkMarkInviteSentAction,
+  bulkSetInvitedByAction,
   deleteCompanionAction,
   deleteGuestAction,
   markInviteSentAction,
@@ -64,6 +65,8 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [queue, setQueue] = useState<QueueState>(null);
   const [bulkMarkPending, setBulkMarkPending] = useState(false);
+  const [bulkSideValue, setBulkSideValue] = useState("");
+  const [bulkSidePending, setBulkSidePending] = useState(false);
 
   async function handleSendWhatsApp(guest: GuestRowView) {
     // Open synchronously (before any await) so popup blockers don't swallow it.
@@ -300,6 +303,26 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
     }
   }
 
+  async function handleBulkSetInvitedBy() {
+    const targetLabel = sideTabs.find((t) => t.key === bulkSideValue)?.label ?? "Sin definir";
+    const confirmed = await confirm(`¿Asignar "${targetLabel}" como lado de ${selectedGuests.length} invitado(s)?`);
+    if (!confirmed) return;
+    setBulkSidePending(true);
+    try {
+      const formData = new FormData();
+      formData.set("ids", selectedGuests.map((g) => g.id).join(","));
+      formData.set("invitedBy", bulkSideValue);
+      await bulkSetInvitedByAction(formData);
+      router.refresh();
+      showToast(`Lado actualizado para ${selectedGuests.length} invitado(s).`);
+      setSelectedIds(new Set());
+    } catch {
+      showToast("No se pudo actualizar el lado en lote.", "error");
+    } finally {
+      setBulkSidePending(false);
+    }
+  }
+
   return (
     <div>
       <div className={styles.tabs}>
@@ -339,6 +362,27 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
           <button type="button" className={styles.actionButton} disabled={bulkMarkPending} onClick={handleBulkMarkSent}>
             {bulkMarkPending ? "Guardando…" : `Marcar invitación como enviada (${selectedGuests.length})`}
           </button>
+          <div className={styles.bulkSideGroup}>
+            <select
+              className={styles.select}
+              value={bulkSideValue}
+              onChange={(e) => setBulkSideValue(e.target.value)}
+              disabled={bulkSidePending}
+              aria-label="Asignar lado en lote"
+            >
+              <option value="">Sin definir</option>
+              {sideTabs
+                .filter((tab) => tab.key !== "all")
+                .map((tab) => (
+                  <option key={tab.key} value={tab.key}>
+                    {tab.label}
+                  </option>
+                ))}
+            </select>
+            <button type="button" className={styles.actionButton} disabled={bulkSidePending} onClick={handleBulkSetInvitedBy}>
+              {bulkSidePending ? "Guardando…" : `Asignar lado (${selectedGuests.length})`}
+            </button>
+          </div>
           <button type="button" className={styles.actionLink} onClick={() => setSelectedIds(new Set())}>
             Cancelar selección
           </button>

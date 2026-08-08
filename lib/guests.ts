@@ -282,6 +282,14 @@ export async function bulkMarkInviteSent(ids: string[]): Promise<void> {
   if (error) throw error;
 }
 
+/** Bulk-reassigns `invited_by` for many guests at once — e.g. sorting a batch of "sin definir" guests onto a side. `null` clears the assignment back to unassigned. */
+export async function bulkSetInvitedBy(ids: string[], invitedBy: InvitedBy | null): Promise<void> {
+  if (ids.length === 0) return;
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("guests").update({ invited_by: invitedBy }).in("id", ids);
+  if (error) throw error;
+}
+
 export async function markConfirmationSent(id: string): Promise<void> {
   const supabase = createSupabaseAdminClient();
   const { error } = await supabase
