@@ -2,50 +2,24 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Guest } from "@/types/guest";
+import type { Guest, GuestCompanion } from "@/types/guest";
 import { useAdminToast } from "@/components/admin/Toast";
 import { toggleCompanionCheckedInAction, toggleGuestCheckedInAction } from "@/app/admin/guests/actions";
 import styles from "./CheckinBoard.module.css";
 
-interface PersonRow {
-  key: string;
-  guestId: string;
-  companionId: string | null;
-  name: string;
-  guestName: string;
-  isCompanion: boolean;
-  checkedIn: boolean;
-}
-
-function flatten(guests: Guest[]): PersonRow[] {
-  const rows: PersonRow[] = [];
-  for (const guest of guests) {
-    // Skip the primary's own row when they declined but named companions still attend — they were
-    // never going to be checked in.
-    if (guest.primaryAttending !== false) {
-      rows.push({
-        key: guest.id,
-        guestId: guest.id,
-        companionId: null,
-        name: guest.name,
-        guestName: guest.name,
-        isCompanion: false,
-        checkedIn: guest.checkedIn,
-      });
-    }
-    for (const companion of guest.companions) {
-      rows.push({
-        key: companion.id,
-        guestId: guest.id,
-        companionId: companion.id,
-        name: companion.name,
-        guestName: guest.name,
-        isCompanion: true,
-        checkedIn: companion.checkedIn,
-      });
-    }
+/**
+ * Grouping is purely visual — every person (guest or companion) keeps their own independent
+ * check-in toggle regardless of family. A companion can show "Llegó ✓" while their primary guest's
+ * cluster still sits in "Por llegar." Column placement uses the primary's own `checkedIn` when
+ * they're expected to attend; for a guest who declined while their companions still attend
+ * (`primaryAttending === false`, no primary row at all), placement instead follows whether every
+ * companion has arrived, since there's no primary status to anchor on.
+ */
+function clusterArrived(guest: Guest): boolean {
+  if (guest.primaryAttending === false) {
+    return guest.companions.length > 0 && guest.companions.every((c) => c.checkedIn);
   }
-  return rows;
+  return guest.checkedIn;
 }
 
 export function CheckinBoard({ guests }: { guests: Guest[] }) {
@@ -54,40 +28,61 @@ export function CheckinBoard({ guests }: { guests: Guest[] }) {
   const [search, setSearch] = useState("");
   const [pendingKey, setPendingKey] = useState<string | null>(null);
 
-  const allRows = useMemo(() => flatten(guests), [guests]);
   const expected = useMemo(() => guests.reduce((sum, g) => sum + (g.rsvpAttendingCount ?? 0), 0), [guests]);
-  const arrived = useMemo(() => allRows.filter((r) => r.checkedIn).length, [allRows]);
+  const arrived = useMemo(
+    () =>
+      guests.reduce((sum, g) => {
+        const guestArrived = g.primaryAttending !== false && g.checkedIn ? 1 : 0;
+        const companionsArrived = g.companions.filter((c) => c.checkedIn).length;
+        return sum + guestArrived + companionsArrived;
+      }, 0),
+    [guests],
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return allRows;
-    return allRows.filter((r) => r.name.toLowerCase().includes(q));
-  }, [allRows, search]);
+    if (!q) return guests;
+    return guests.filter(
+      (g) => g.name.toLowerCase().includes(q) || g.companions.some((c) => c.name.toLowerCase().includes(q)),
+    );
+  }, [guests, search]);
 
   const notArrived = useMemo(
-    () => filtered.filter((r) => !r.checkedIn).sort((a, b) => a.name.localeCompare(b.name, "es")),
+    () => filtered.filter((g) => !clusterArrived(g)).sort((a, b) => a.name.localeCompare(b.name, "es")),
     [filtered],
   );
-  const arrivedRows = useMemo(
-    () => filtered.filter((r) => r.checkedIn).sort((a, b) => a.name.localeCompare(b.name, "es")),
+  const arrivedClusters = useMemo(
+    () => filtered.filter((g) => clusterArrived(g)).sort((a, b) => a.name.localeCompare(b.name, "es")),
     [filtered],
   );
 
-  async function handleToggle(row: PersonRow) {
-    setPendingKey(row.key);
+  async function handleToggleGuest(guest: Guest) {
+    setPendingKey(guest.id);
     try {
       const formData = new FormData();
-      if (row.companionId) {
-        formData.set("companionId", row.companionId);
-        formData.set("checkedIn", String(!row.checkedIn));
-        await toggleCompanionCheckedInAction(formData);
-      } else {
-        formData.set("id", row.guestId);
-        formData.set("checkedIn", String(!row.checkedIn));
-        await toggleGuestCheckedInAction(formData);
-      }
+      formData.set("id", guest.id);
+      formData.set("checkedIn", String(!guest.checkedIn));
+      await toggleGuestCheckedInAction(formData);
       router.refresh();
-      showToast(row.checkedIn ? `Check-in de ${row.name} deshecho.` : `${row.name} marcado como llegado.`);
+      showToast(guest.checkedIn ? `Check-in de ${guest.name} deshecho.` : `${guest.name} marcado como llegado.`);
+    } catch {
+      showToast("No se pudo actualizar el check-in.", "error");
+    } finally {
+      setPendingKey(null);
+    }
+  }
+
+  async function handleToggleCompanion(companion: GuestCompanion) {
+    setPendingKey(companion.id);
+    try {
+      const formData = new FormData();
+      formData.set("companionId", companion.id);
+      formData.set("checkedIn", String(!companion.checkedIn));
+      await toggleCompanionCheckedInAction(formData);
+      router.refresh();
+      showToast(
+        companion.checkedIn ? `Check-in de ${companion.name} deshecho.` : `${companion.name} marcado como llegado.`,
+      );
     } catch {
       showToast("No se pudo actualizar el check-in.", "error");
     } finally {
@@ -114,15 +109,17 @@ export function CheckinBoard({ guests }: { guests: Guest[] }) {
       <div className={styles.columns}>
         <CheckinColumn
           title={`Por llegar (${notArrived.length})`}
-          rows={notArrived}
+          guests={notArrived}
           pendingKey={pendingKey}
-          onToggle={handleToggle}
+          onToggleGuest={handleToggleGuest}
+          onToggleCompanion={handleToggleCompanion}
         />
         <CheckinColumn
-          title={`Llegaron (${arrivedRows.length})`}
-          rows={arrivedRows}
+          title={`Llegaron (${arrivedClusters.length})`}
+          guests={arrivedClusters}
           pendingKey={pendingKey}
-          onToggle={handleToggle}
+          onToggleGuest={handleToggleGuest}
+          onToggleCompanion={handleToggleCompanion}
         />
       </div>
     </div>
@@ -131,39 +128,61 @@ export function CheckinBoard({ guests }: { guests: Guest[] }) {
 
 interface CheckinColumnProps {
   title: string;
-  rows: PersonRow[];
+  guests: Guest[];
   pendingKey: string | null;
-  onToggle: (row: PersonRow) => void;
+  onToggleGuest: (guest: Guest) => void;
+  onToggleCompanion: (companion: GuestCompanion) => void;
 }
 
-function CheckinColumn({ title, rows, pendingKey, onToggle }: CheckinColumnProps) {
+function CheckinColumn({ title, guests, pendingKey, onToggleGuest, onToggleCompanion }: CheckinColumnProps) {
   return (
     <div className={styles.column}>
       <h2 className={styles.columnTitle}>{title}</h2>
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <tbody>
-            {rows.map((row) => (
-              <tr key={row.key} className={styles.row}>
+            {guests.map((guest) => (
+              <tr key={guest.id} className={styles.row}>
                 <td>
-                  <div className={styles.rowMain}>
-                    <span className={styles.rowName}>
-                      {row.name}
-                      {row.isCompanion && <span className={styles.rowMeta}> · acompañante de {row.guestName}</span>}
-                    </span>
-                    <button
-                      type="button"
-                      className={styles.toggleButton}
-                      disabled={pendingKey === row.key}
-                      onClick={() => onToggle(row)}
-                    >
-                      {pendingKey === row.key ? "Guardando…" : row.checkedIn ? "Deshacer" : "Marcar llegada"}
-                    </button>
-                  </div>
+                  {guest.primaryAttending !== false && (
+                    <div className={styles.rowMain}>
+                      <span className={styles.rowName}>{guest.name}</span>
+                      <button
+                        type="button"
+                        className={styles.toggleButton}
+                        disabled={pendingKey === guest.id}
+                        onClick={() => onToggleGuest(guest)}
+                      >
+                        {pendingKey === guest.id ? "Guardando…" : guest.checkedIn ? "Deshacer" : "Marcar llegada"}
+                      </button>
+                    </div>
+                  )}
+                  {guest.companions.length > 0 && (
+                    <ul className={styles.companionList}>
+                      {guest.companions.map((companion) => (
+                        <li key={companion.id} className={styles.companionRow}>
+                          <span className={styles.rowName}>
+                            {companion.name}
+                            {guest.primaryAttending === false && (
+                              <span className={styles.rowMeta}> · acompañante de {guest.name}</span>
+                            )}
+                          </span>
+                          <button
+                            type="button"
+                            className={styles.toggleButton}
+                            disabled={pendingKey === companion.id}
+                            onClick={() => onToggleCompanion(companion)}
+                          >
+                            {pendingKey === companion.id ? "Guardando…" : companion.checkedIn ? "Deshacer" : "Marcar llegada"}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && (
+            {guests.length === 0 && (
               <tr>
                 <td className={styles.empty}>Sin invitados.</td>
               </tr>

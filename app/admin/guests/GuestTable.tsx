@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { wedding } from "@/config/site";
 import type { Guest, GuestCompanion } from "@/types/guest";
 import { useAdminToast } from "@/components/admin/Toast";
 import { useAdminConfirm } from "@/components/admin/ConfirmDialog";
@@ -67,6 +68,8 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
   const [bulkMarkPending, setBulkMarkPending] = useState(false);
   const [bulkSideValue, setBulkSideValue] = useState("");
   const [bulkSidePending, setBulkSidePending] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const pastDeadline = Date.now() > new Date(wedding.rsvpDeadlineIso).getTime();
 
   async function handleSendWhatsApp(guest: GuestRowView) {
     // Open synchronously (before any await) so popup blockers don't swallow it.
@@ -210,16 +213,29 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
     }
   }
 
+  function matchesSearch(g: GuestRowView, q: string): boolean {
+    if (!q) return true;
+    const matchesCompanion = g.companionNames.some((name) => name.toLowerCase().includes(q));
+    return g.name.toLowerCase().includes(q) || g.whatsappNumber.includes(q) || matchesCompanion;
+  }
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return guests.filter((g) => {
-      const matchesCompanion = g.companionNames.some((name) => name.toLowerCase().includes(q));
-      if (q && !g.name.toLowerCase().includes(q) && !g.whatsappNumber.includes(q) && !matchesCompanion) return false;
+      if (!matchesSearch(g, q)) return false;
       // "Todos" (all) also includes guests with no side assigned yet — they only ever show up here,
       // never under any of the 4 specific-side tabs, since none is an exact match for them.
       if (sideTab !== "all" && g.invitedBy !== sideTab) return false;
       return true;
     });
+  }, [guests, search, sideTab]);
+
+  // When the active side tab hides a real match, say so — otherwise a search for a guest on a
+  // different side silently reads as "this guest doesn't exist."
+  const matchesOutsideTab = useMemo(() => {
+    if (sideTab === "all" || !search.trim()) return [];
+    const q = search.trim().toLowerCase();
+    return guests.filter((g) => matchesSearch(g, q) && g.invitedBy !== sideTab);
   }, [guests, search, sideTab]);
 
   // Same 4 buckets in every tab, in a fixed priority order: the "done" bucket first, then the
@@ -268,6 +284,15 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
 
   function toggleSelectAllFiltered() {
     setSelectedIds(allFilteredSelected ? new Set() : new Set(filtered.map((g) => g.id)));
+  }
+
+  function toggleGroupCollapsed(key: string) {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   }
 
   function handleSendReminder(guest: GuestRowView) {
@@ -348,44 +373,63 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
         <span className={styles.count}>
           {filtered.length} de {guests.length}
         </span>
+        <button type="button" className={styles.actionLink} onClick={() => setCollapsedGroups(new Set())}>
+          Expandir todo
+        </button>
+        <button
+          type="button"
+          className={styles.actionLink}
+          onClick={() => setCollapsedGroups(new Set(groups.map((g) => g.key)))}
+        >
+          Colapsar todo
+        </button>
       </div>
 
       {selectedGuests.length > 0 && (
         <div className={styles.bulkBar}>
           <span className={styles.bulkCount}>{selectedGuests.length} seleccionado(s)</span>
-          <button type="button" className={styles.actionButton} onClick={openInviteQueue}>
-            Enviar invitación ({selectedGuests.length})
-          </button>
-          <button type="button" className={styles.actionButton} onClick={openReminderQueue}>
-            Enviar recordatorio ({selectedGuests.filter((g) => g.rsvpStatus === "pending").length})
-          </button>
-          <button type="button" className={styles.actionButton} disabled={bulkMarkPending} onClick={handleBulkMarkSent}>
-            {bulkMarkPending ? "Guardando…" : `Marcar invitación como enviada (${selectedGuests.length})`}
-          </button>
-          <div className={styles.bulkSideGroup}>
-            <select
-              className={styles.select}
-              value={bulkSideValue}
-              onChange={(e) => setBulkSideValue(e.target.value)}
-              disabled={bulkSidePending}
-              aria-label="Asignar lado en lote"
-            >
-              <option value="">Sin definir</option>
-              {sideTabs
-                .filter((tab) => tab.key !== "all")
-                .map((tab) => (
-                  <option key={tab.key} value={tab.key}>
-                    {tab.label}
-                  </option>
-                ))}
-            </select>
-            <button type="button" className={styles.actionButton} disabled={bulkSidePending} onClick={handleBulkSetInvitedBy}>
-              {bulkSidePending ? "Guardando…" : `Asignar lado (${selectedGuests.length})`}
+
+          <div className={styles.bulkCluster}>
+            <button type="button" className={styles.actionButton} onClick={openInviteQueue}>
+              Enviar invitación ({selectedGuests.length})
+            </button>
+            <button type="button" className={styles.actionButton} onClick={openReminderQueue}>
+              Enviar recordatorio ({selectedGuests.filter((g) => g.rsvpStatus === "pending").length})
             </button>
           </div>
-          <button type="button" className={styles.actionLink} onClick={() => setSelectedIds(new Set())}>
-            Cancelar selección
-          </button>
+
+          <div className={styles.bulkCluster}>
+            <button type="button" className={styles.actionButton} disabled={bulkMarkPending} onClick={handleBulkMarkSent}>
+              {bulkMarkPending ? "Guardando…" : `Marcar invitación como enviada (${selectedGuests.length})`}
+            </button>
+            <div className={styles.bulkSideGroup}>
+              <select
+                className={styles.select}
+                value={bulkSideValue}
+                onChange={(e) => setBulkSideValue(e.target.value)}
+                disabled={bulkSidePending}
+                aria-label="Asignar lado en lote"
+              >
+                <option value="">Sin definir</option>
+                {sideTabs
+                  .filter((tab) => tab.key !== "all")
+                  .map((tab) => (
+                    <option key={tab.key} value={tab.key}>
+                      {tab.label}
+                    </option>
+                  ))}
+              </select>
+              <button type="button" className={styles.actionButton} disabled={bulkSidePending} onClick={handleBulkSetInvitedBy}>
+                {bulkSidePending ? "Guardando…" : `Asignar lado (${selectedGuests.length})`}
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.bulkCluster}>
+            <button type="button" className={styles.actionLink} onClick={() => setSelectedIds(new Set())}>
+              Cancelar selección
+            </button>
+          </div>
         </div>
       )}
 
@@ -418,17 +462,33 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
               <tr>
                 <td colSpan={11} className={styles.empty}>
                   No hay invitados que coincidan.
+                  {matchesOutsideTab.length > 0 && (
+                    <div className={styles.emptyHint}>
+                      {matchesOutsideTab.length} invitado{matchesOutsideTab.length === 1 ? "" : "s"} coincide
+                      {matchesOutsideTab.length === 1 ? "" : "n"} en otras pestañas — probá &quot;Todos&quot;.
+                    </div>
+                  )}
                 </td>
               </tr>
             ) : (
-              groups.map((group) => (
+              groups.map((group) => {
+                const collapsed = collapsedGroups.has(group.key);
+                return (
                 <Fragment key={group.key}>
                   <tr className={styles.groupHeaderRow}>
                     <td colSpan={11}>
-                      {group.label} ({group.rows.length})
+                      <button
+                        type="button"
+                        className={styles.groupHeaderButton}
+                        onClick={() => toggleGroupCollapsed(group.key)}
+                        aria-expanded={!collapsed}
+                      >
+                        <span className={`${styles.groupChevron} ${collapsed ? styles.groupChevronCollapsed : ""}`}>▾</span>
+                        {group.label} ({group.rows.length})
+                      </button>
                     </td>
                   </tr>
-                  {group.rows.length === 0 ? (
+                  {collapsed ? null : group.rows.length === 0 ? (
                     <tr>
                       <td colSpan={11} className={styles.groupEmpty}>
                         Sin invitados en este grupo.
@@ -452,15 +512,15 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                     </a>
                   </td>
                   <td>
-                    {guest.invitedBy === "novio" && <span className={styles.badgeSent}>Novio</span>}
-                    {guest.invitedBy === "novia" && <span className={styles.badgeYes}>Novia</span>}
-                    {guest.invitedBy === "padres_novio" && <span className={styles.badgeSent}>Padres Novio</span>}
-                    {guest.invitedBy === "padres_novia" && <span className={styles.badgeYes}>Padres Novia</span>}
+                    {guest.invitedBy === "novio" && <span className={styles.badgeSide}>Novio</span>}
+                    {guest.invitedBy === "novia" && <span className={styles.badgeSide}>Novia</span>}
+                    {guest.invitedBy === "padres_novio" && <span className={styles.badgeSide}>Padres Novio</span>}
+                    {guest.invitedBy === "padres_novia" && <span className={styles.badgeSide}>Padres Novia</span>}
                     {!guest.invitedBy && <span className={styles.badgePending}>Sin definir</span>}
                   </td>
                   <td>
-                    {guest.guestLocation === "extranjero" && <span className={styles.badgeSent}>Extranjero</span>}
-                    {guest.guestLocation === "local" && <span className={styles.badgeYes}>Local</span>}
+                    {guest.guestLocation === "extranjero" && <span className={styles.badgeLocation}>Extranjero</span>}
+                    {guest.guestLocation === "local" && <span className={styles.badgeLocation}>Local</span>}
                     {!guest.guestLocation && <span className={styles.badgePending}>Sin definir</span>}
                   </td>
                   <td className={styles.mono}>{guest.whatsappNumber}</td>
@@ -488,7 +548,12 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                       </span>
                     )}
                     {guest.rsvpStatus === "no" && <span className={styles.badgeNo}>No</span>}
-                    {guest.rsvpStatus === "pending" && <span className={styles.badgePending}>Pendiente</span>}
+                    {guest.rsvpStatus === "pending" &&
+                      (pastDeadline ? (
+                        <span className={styles.badgeOverdue}>Pendiente · vencido</span>
+                      ) : (
+                        <span className={styles.badgePending}>Pendiente</span>
+                      ))}
                   </td>
                   <td>
                     {guest.rsvpStatus === "yes" ? (
@@ -613,7 +678,7 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                                 {companion.checkedIn ? (
                                   <span className={styles.badgeYes}>Sí · {formatDate(companion.checkedInAt)}</span>
                                 ) : (
-                                  <span className={styles.badgePending}>Pendiente</span>
+                                  <span className={styles.badgePending}>No ha llegado</span>
                                 )}
                               </td>
                               <td className={styles.actions}>
@@ -667,7 +732,8 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                     ))
                   )}
                 </Fragment>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

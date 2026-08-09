@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getGuestSideBreakdown, listGuests } from "@/lib/guests";
+import { wedding } from "@/config/site";
 import { SideBreakdownChart } from "./SideBreakdownChart";
 import styles from "./page.module.css";
 
@@ -45,20 +46,42 @@ export default async function AdminDashboardPage() {
     return sum + guestArrived + companionsArrived;
   }, 0);
 
-  const cards = [
+  const responded = stats.yes + stats.no;
+  const responseRate = stats.total > 0 ? Math.round((responded / stats.total) * 100) : 0;
+  const deadlineMs = new Date(wedding.rsvpDeadlineIso).getTime();
+  const pastDeadline = Date.now() > deadlineMs;
+  const daysToDeadline = Math.ceil((deadlineMs - Date.now()) / 86_400_000);
+
+  // The numbers an admin needs on every visit: overall progress, the three outcomes, and how much
+  // time is left. Shown bigger/first — everything else is context, not a daily decision driver.
+  const primaryCards = [
+    { label: "Respondieron", value: `${responseRate}%` },
+    { label: "Confirmados", value: stats.yes },
+    { label: "No asistirán", value: stats.no },
+    { label: "Pendientes", value: stats.pending },
+    {
+      label: wedding.rsvpDeadlineLabel,
+      value: pastDeadline ? "Plazo vencido" : `${daysToDeadline} día${daysToDeadline === 1 ? "" : "s"}`,
+      warning: pastDeadline,
+    },
+  ];
+
+  // By-side invited capacity belongs next to the per-side breakdown, not competing with the daily
+  // decision-driving numbers above.
+  const sideCapacityCards = [
+    { label: "Novio", value: stats.invitedPersonsNovio },
+    { label: "Novia", value: stats.invitedPersonsNovia },
+    { label: "Padres Novio", value: stats.invitedPersonsPadresNovio },
+    { label: "Padres Novia", value: stats.invitedPersonsPadresNovia },
+  ];
+
+  const secondaryCards = [
     { label: "Invitados totales", value: stats.total },
     { label: "Personas invitadas en total", value: stats.invitedPersonsTotal },
-    { label: "Personas invitadas · Novio", value: stats.invitedPersonsNovio },
-    { label: "Personas invitadas · Novia", value: stats.invitedPersonsNovia },
-    { label: "Personas invitadas · Padres Novio", value: stats.invitedPersonsPadresNovio },
-    { label: "Personas invitadas · Padres Novia", value: stats.invitedPersonsPadresNovia },
     { label: "Invitados locales", value: stats.local },
     { label: "Invitados del extranjero", value: stats.extranjero },
     { label: "Invitaciones enviadas", value: `${stats.invitesSent} / ${stats.total}` },
     { label: "Han visto la invitación", value: `${stats.viewed} / ${stats.total}` },
-    { label: "Confirmados", value: stats.yes },
-    { label: "No asistirán", value: stats.no },
-    { label: "Pendientes", value: stats.pending },
     { label: "Total de asistentes confirmados", value: stats.attending },
     { label: "Acompañantes utilizados", value: `${stats.companionSlotsUsed} / ${stats.companionSlotsAllowed}` },
     { label: "Han llegado (check-in)", value: `${checkedInCount} / ${stats.attending}` },
@@ -67,8 +90,18 @@ export default async function AdminDashboardPage() {
   return (
     <div>
       <h1 className={styles.heading}>Resumen</h1>
+
+      <div className={styles.primaryGrid}>
+        {primaryCards.map((card) => (
+          <div key={card.label} className={`${styles.primaryCard} ${card.warning ? styles.primaryCardWarning : ""}`}>
+            <div className={styles.primaryCardValue}>{card.value}</div>
+            <div className={styles.primaryCardLabel}>{card.label}</div>
+          </div>
+        ))}
+      </div>
+
       <div className={styles.grid}>
-        {cards.map((card) => (
+        {secondaryCards.map((card) => (
           <div key={card.label} className={styles.card}>
             <div className={styles.cardValue}>{card.value}</div>
             <div className={styles.cardLabel}>{card.label}</div>
@@ -77,6 +110,14 @@ export default async function AdminDashboardPage() {
       </div>
 
       <h2 className={styles.subheading}>Por lado</h2>
+      <div className={styles.sideCapacityRow}>
+        {sideCapacityCards.map((card) => (
+          <div key={card.label} className={styles.sideCapacityCard}>
+            <div className={styles.sideCapacityValue}>{card.value}</div>
+            <div className={styles.sideCapacityLabel}>{card.label}</div>
+          </div>
+        ))}
+      </div>
       <SideBreakdownChart data={sideBreakdown} />
 
       <div className={styles.linkRow}>

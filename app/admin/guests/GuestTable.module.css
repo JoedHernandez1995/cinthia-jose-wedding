@@ -68,13 +68,38 @@
 }
 
 .groupHeaderRow td {
-  padding: 10px 14px;
+  padding: 0;
   background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.groupHeaderButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
   color: var(--color-muted);
   font: 600 11px/1.2 var(--font-label);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  cursor: pointer;
+}
+.groupHeaderButton:hover {
+  color: var(--color-ink);
+}
+
+.groupChevron {
+  display: inline-block;
+  font-size: 12px;
+  transition: transform 0.15s ease;
+}
+
+.groupChevronCollapsed {
+  transform: rotate(-90deg);
 }
 
 .groupEmpty {
@@ -101,6 +126,19 @@
   font: 500 12px/1.4 var(--font-label);
   color: var(--color-ink);
   margin-right: 4px;
+}
+
+.bulkCluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-left: 12px;
+  border-left: 1px solid var(--color-border);
+}
+.bulkCluster:first-of-type {
+  padding-left: 0;
+  border-left: none;
 }
 
 .tableWrap {
@@ -172,6 +210,30 @@
 .badgeSent {
   background: #eef1f7;
   color: #4a5a80;
+}
+.badgeSide {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: #f1e9f7;
+  color: #6a4a8a;
+}
+.badgeLocation {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: #e0f0ee;
+  color: #2f6f66;
+}
+.badgeOverdue {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: #fbe9d7;
+  color: #a3611a;
 }
 
 .companionSubRow td {
@@ -268,4 +330,10 @@
   text-align: center;
   color: var(--color-muted-light);
   padding: 24px;
+}
+
+.emptyHint {
+  font-size: 12px;
+  margin-top: 6px;
+  color: var(--color-taupe);
 }

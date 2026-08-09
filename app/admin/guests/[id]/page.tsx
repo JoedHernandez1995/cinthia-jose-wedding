@@ -78,7 +78,7 @@ export default async function AdminGuestDetailPage({ params }: { params: { id: s
                 ? "No asistirá"
                 : guest.checkedIn
                   ? `Sí · ${formatDate(guest.checkedInAt)}`
-                  : "Pendiente"}
+                  : "No ha llegado"}
             </dd>
             <dt>Acompañantes confirmados</dt>
             <dd>
@@ -97,7 +97,7 @@ export default async function AdminGuestDetailPage({ params }: { params: { id: s
                         </span>
                         <br />
                         <span className={styles.companionOf}>
-                          {companion.checkedIn ? `Check-in · ${formatDate(companion.checkedInAt)}` : "Pendiente"}
+                          {companion.checkedIn ? `Check-in · ${formatDate(companion.checkedInAt)}` : "No ha llegado"}
                         </span>
                       </span>
                     </li>
