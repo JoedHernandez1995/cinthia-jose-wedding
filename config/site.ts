@@ -232,12 +232,17 @@ export const giftAccountsLocal: GiftAccount[] = [
 export const giftAccountsAbroad: GiftAccount[] = [
   {
     label: "Venmo",
-    primaryLine: "@Jose-Cinthia-Boda",
-    copyText: "@Jose-Cinthia-Boda",
+    primaryLine: "@clopezv10",
+    copyText: "@clopezv10",
   },
   {
     label: "Paypal",
     primaryLine: "@Jeha1995",
     copyText: "@Jeha1995",
   },
+  {
+    label: "Zelle",
+    primaryLine: "4798798345",
+    copyText: "4798798345",
+  }
 ];
