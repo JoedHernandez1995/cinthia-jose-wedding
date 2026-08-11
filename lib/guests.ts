@@ -44,6 +44,8 @@ interface GuestRow {
   rsvp_responded_at: string | null;
   confirmation_sent_at: string | null;
   confirmation_send_error: string | null;
+  reminder_sent_at: string | null;
+  reminder_send_error: string | null;
   checked_in: boolean;
   checked_in_at: string | null;
   first_viewed_at: string | null;
@@ -97,6 +99,8 @@ function mapRow(row: GuestRow, companions: GuestCompanion[]): Guest {
     rsvpRespondedAt: row.rsvp_responded_at,
     confirmationSentAt: row.confirmation_sent_at,
     confirmationSendError: row.confirmation_send_error,
+    reminderSentAt: row.reminder_sent_at,
+    reminderSendError: row.reminder_send_error,
     firstViewedAt: row.first_viewed_at,
     lastViewedAt: row.last_viewed_at,
     viewCount: row.view_count,
@@ -302,6 +306,21 @@ export async function markConfirmationSent(id: string): Promise<void> {
 export async function markConfirmationFailed(id: string, message: string): Promise<void> {
   const supabase = createSupabaseAdminClient();
   const { error } = await supabase.from("guests").update({ confirmation_send_error: message }).eq("id", id);
+  if (error) throw error;
+}
+
+export async function markReminderSent(id: string): Promise<void> {
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase
+    .from("guests")
+    .update({ reminder_sent_at: new Date().toISOString(), reminder_send_error: null })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function markReminderFailed(id: string, message: string): Promise<void> {
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("guests").update({ reminder_send_error: message }).eq("id", id);
   if (error) throw error;
 }
 

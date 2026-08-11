@@ -43,6 +43,8 @@ export interface Guest {
   rsvpRespondedAt: string | null;
   confirmationSentAt: string | null;
   confirmationSendError: string | null;
+  reminderSentAt: string | null;
+  reminderSendError: string | null;
   firstViewedAt: string | null;
   lastViewedAt: string | null;
   viewCount: number;

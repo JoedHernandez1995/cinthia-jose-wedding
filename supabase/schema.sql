@@ -57,6 +57,10 @@ alter table guests add column if not exists confirmation_sent_at timestamptz;
 alter table guests add column if not exists confirmation_send_error text;
 create index if not exists guests_checkin_code_idx on guests (checkin_code);
 
+-- RSVP reminder emails, sent to guests who opened the invitation but haven't responded yet.
+alter table guests add column if not exists reminder_sent_at timestamptz;
+alter table guests add column if not exists reminder_send_error text;
+
 
 -- Optional family/group name shown on the invitation instead of the
 -- individual guest's name (e.g. "Familia Martínez" for Raúl Martínez + 3

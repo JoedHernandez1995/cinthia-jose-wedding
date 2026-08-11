@@ -11,6 +11,7 @@ import {
   createGuest,
   deleteCompanion,
   deleteGuest,
+  getGuestById,
   markInviteSent,
   overrideRsvp,
   parseGuestCsvRows,
@@ -21,6 +22,7 @@ import {
   updateGuest,
   upsertGuestsFromCsv,
 } from "@/lib/guests";
+import { sendGuestReminder } from "@/lib/reminder";
 import type { CsvUploadResult, GuestLocation, InvitedBy, RsvpStatus } from "@/types/guest";
 
 const INVITED_BY_VALUES: InvitedBy[] = ["novio", "novia", "padres_novio", "padres_novia"];
@@ -202,6 +204,31 @@ export async function deleteCompanionAction(formData: FormData): Promise<void> {
   const guestId = await deleteCompanion(companionId);
   revalidatePath("/admin/guests");
   revalidatePath(`/admin/guests/${guestId}`);
+}
+
+/**
+ * Sends a single "please RSVP" reminder email. Called both from the per-row button and, once per
+ * selected guest, from the bulk reminder queue's client-side loop — Server Actions have no
+ * built-in way to stream progress for a server-side loop over many guests, so the fan-out lives
+ * in the client instead (see `BulkReminderQueue.tsx`).
+ */
+export async function sendReminderEmailAction(formData: FormData): Promise<ActionResult> {
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, message: "Falta el invitado." };
+
+  const guest = await getGuestById(id);
+  if (!guest) return { ok: false, message: "Invitado no encontrado." };
+  if (!guest.email) return { ok: false, message: `${guest.name} no tiene correo registrado.` };
+  if (guest.rsvpStatus !== "pending" || guest.viewCount <= 0) {
+    return { ok: false, message: `${guest.name} no califica para un recordatorio por correo.` };
+  }
+
+  const sent = await sendGuestReminder(guest);
+  revalidatePath("/admin/guests");
+  revalidatePath(`/admin/guests/${id}`);
+  return sent
+    ? { ok: true, message: `Recordatorio enviado a ${guest.name}.` }
+    : { ok: false, message: `No se pudo enviar el recordatorio a ${guest.name}.` };
 }
 
 export async function overrideRsvpAction(_prevState: ActionResult | null, formData: FormData): Promise<ActionResult> {

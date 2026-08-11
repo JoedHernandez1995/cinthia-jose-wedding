@@ -179,3 +179,65 @@ export async function sendRsvpConfirmationEmail({
     throw new Error(error.message);
   }
 }
+
+export interface SendRsvpReminderEmailInput {
+  to: string;
+  guestName: string;
+  /** Personal token — builds the `/i/[token]#rsvp` link so the guest can respond directly. */
+  token: string;
+}
+
+/**
+ * Same hand-written inline-styled HTML approach as `buildConfirmationEmailHtml` — a shorter card
+ * with a single CTA, no summary table or PDF attachment, since this only nudges an unanswered
+ * guest toward the RSVP form rather than confirming an outcome.
+ */
+function buildReminderEmailHtml(guestName: string, rsvpLink: string): string {
+  const siteUrl = getSiteUrl();
+
+  return `
+    <div style="background: ${brandColors.bg}; padding: 32px 16px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
+      <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid ${brandColors.border};">
+        <div style="padding: 36px 32px 28px; text-align: center;">
+          <img src="${siteUrl}/assets/monogram.png" alt="${coupleNames.full}" width="48" style="margin-bottom: 16px;" />
+          <h1 style="margin: 0 0 10px; font: 400 26px/1.3 Georgia, 'Times New Roman', serif; color: ${brandColors.ink};">
+            ${coupleNames.full}
+          </h1>
+          <div style="width: 48px; height: 2px; background: ${brandColors.gold}; margin: 0 auto 18px;"></div>
+          <p style="margin: 0; font-size: 15px; line-height: 1.6; color: ${brandColors.muted};">
+            ¡Hola${guestName ? `, ${guestName}` : ""}! Todavía no hemos recibido tu confirmación de asistencia para nuestra boda.
+            Nos encantaría contar con tu respuesta antes del ${wedding.rsvpDeadlineLabel}.
+          </p>
+        </div>
+
+        <div style="padding: 0 32px 32px; text-align: center;">
+          <a href="${rsvpLink}" style="display: inline-block; background: ${brandColors.gold}; color: #ffffff; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-decoration: none; padding: 12px 24px; border-radius: 4px;">
+            Confirmar asistencia
+          </a>
+        </div>
+
+        <div style="padding: 16px 32px; background: ${brandColors.bgAlt}; border-top: 1px solid ${brandColors.border}; text-align: center;">
+          <p style="margin: 0; font-size: 11px; letter-spacing: 0.05em; color: ${brandColors.taupeLight};">
+            ${coupleNames.full} · ${wedding.dateLabel}
+          </p>
+        </div>
+      </div>
+    </div>`;
+}
+
+export async function sendRsvpReminderEmail({ to, guestName, token }: SendRsvpReminderEmailInput): Promise<void> {
+  const resend = getResendClient();
+  const fromEmail = requireEnv("RESEND_FROM_EMAIL");
+  const rsvpLink = `${getSiteUrl()}/i/${token}#rsvp`;
+
+  const { error } = await resend.emails.send({
+    from: fromEmail,
+    to,
+    subject: `Todavía esperamos tu confirmación — Boda ${coupleNames.full}`,
+    html: buildReminderEmailHtml(guestName, rsvpLink),
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}

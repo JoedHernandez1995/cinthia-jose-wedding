@@ -15,13 +15,15 @@ import {
   markInviteSentAction,
   regenerateTokenAction,
   renameCompanionAction,
+  sendReminderEmailAction,
   toggleCompanionCheckedInAction,
   toggleGuestCheckedInAction,
 } from "./actions";
 import { BulkSendQueue } from "./BulkSendQueue";
+import { BulkReminderQueue } from "./BulkReminderQueue";
 import styles from "./GuestTable.module.css";
 
-type PendingAction = "whatsapp" | "regenerate" | "delete" | "resend" | "checkin" | "rename";
+type PendingAction = "whatsapp" | "regenerate" | "delete" | "resend" | "checkin" | "rename" | "reminderEmail";
 
 export interface CompanionRowView extends GuestCompanion {
   resendLink: string;
@@ -65,6 +67,9 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
   const [editingName, setEditingName] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [queue, setQueue] = useState<QueueState>(null);
+  const [emailReminderQueue, setEmailReminderQueue] = useState<{ guests: GuestRowView[]; excludedCount: number } | null>(
+    null,
+  );
   const [bulkMarkPending, setBulkMarkPending] = useState(false);
   const [bulkSideValue, setBulkSideValue] = useState("");
   const [bulkSidePending, setBulkSidePending] = useState(false);
@@ -299,6 +304,28 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
     window.open(guest.reminderLink, "_blank", "noopener");
   }
 
+  // Only guests who opened the invitation but haven't responded — and have an email on file —
+  // are candidates for the reminder *email* (distinct from the WhatsApp reminder above, which
+  // only requires `rsvpStatus === "pending"`).
+  function isReminderEmailEligible(guest: GuestRowView): boolean {
+    return guest.rsvpStatus === "pending" && guest.viewCount > 0 && Boolean(guest.email);
+  }
+
+  async function handleSendReminderEmail(guest: GuestRowView) {
+    setPending({ id: guest.id, action: "reminderEmail" });
+    try {
+      const formData = new FormData();
+      formData.set("id", guest.id);
+      const result = await sendReminderEmailAction(formData);
+      showToast(result.message, result.ok ? undefined : "error");
+      if (result.ok) router.refresh();
+    } catch {
+      showToast("No se pudo enviar el recordatorio por correo.", "error");
+    } finally {
+      setPending(null);
+    }
+  }
+
   function openInviteQueue() {
     setQueue({ kind: "invite", guests: selectedGuests, excludedCount: 0 });
   }
@@ -306,6 +333,11 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
   function openReminderQueue() {
     const eligible = selectedGuests.filter((g) => g.rsvpStatus === "pending");
     setQueue({ kind: "reminder", guests: eligible, excludedCount: selectedGuests.length - eligible.length });
+  }
+
+  function openEmailReminderQueue() {
+    const eligible = selectedGuests.filter(isReminderEmailEligible);
+    setEmailReminderQueue({ guests: eligible, excludedCount: selectedGuests.length - eligible.length });
   }
 
   async function handleBulkMarkSent() {
@@ -395,6 +427,9 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
             </button>
             <button type="button" className={styles.actionButton} onClick={openReminderQueue}>
               Enviar recordatorio ({selectedGuests.filter((g) => g.rsvpStatus === "pending").length})
+            </button>
+            <button type="button" className={styles.actionButton} onClick={openEmailReminderQueue}>
+              Enviar recordatorio por correo ({selectedGuests.filter(isReminderEmailEligible).length})
             </button>
           </div>
 
@@ -586,6 +621,18 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                         Enviar recordatorio
                       </button>
                     )}
+                    {isReminderEmailEligible(guest) && (
+                      <button
+                        type="button"
+                        className={styles.actionLink}
+                        disabled={pending?.id === guest.id}
+                        onClick={() => handleSendReminderEmail(guest)}
+                      >
+                        {pending?.id === guest.id && pending.action === "reminderEmail"
+                          ? "Enviando…"
+                          : "Enviar recordatorio por correo"}
+                      </button>
+                    )}
                     {guest.rsvpStatus === "yes" && (
                       <>
                         <button
@@ -745,6 +792,14 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
           guests={queue.guests}
           excludedCount={queue.excludedCount}
           onClose={() => setQueue(null)}
+        />
+      )}
+
+      {emailReminderQueue && (
+        <BulkReminderQueue
+          guests={emailReminderQueue.guests}
+          excludedCount={emailReminderQueue.excludedCount}
+          onClose={() => setEmailReminderQueue(null)}
         />
       )}
     </div>
