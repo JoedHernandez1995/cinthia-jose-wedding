@@ -34,6 +34,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <Link href="/admin/checkin" className={styles.navLink}>
                 Check-in
               </Link>
+              <Link href="/admin/gift-accounts" className={styles.navLink}>
+                Cuentas de regalo
+              </Link>
+              <Link href="/admin/recommendations" className={styles.navLink}>
+                Recomendaciones
+              </Link>
             </nav>
             <form action={signOut}>
               <SubmitButton label="Cerrar sesión" pendingLabel="Cerrando sesión…" className={styles.signOut} />

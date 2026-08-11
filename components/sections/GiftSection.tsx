@@ -2,9 +2,9 @@
 
 import { Reveal } from "@/components/ui/Reveal";
 import { GoldDivider } from "@/components/ui/GoldDivider";
-import { giftAccountsAbroad, giftAccountsLocal } from "@/config/site";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import type { GuestViewModel } from "@/types/guest";
+import type { GiftAccount } from "@/types/invitation";
 import styles from "./GiftSection.module.css";
 
 const giftIntroCopy =
@@ -14,10 +14,12 @@ const giftIntroCopy =
 
 interface GiftSectionProps {
   guest: GuestViewModel;
+  giftAccountsLocal: GiftAccount[];
+  giftAccountsAbroad: GiftAccount[];
 }
 
-/** "Más Que Un Regalo" section: gift-registry accounts with copy-to-clipboard buttons — local bank accounts, or PayPal/Venmo for guests traveling from abroad. */
-export function GiftSection({ guest }: GiftSectionProps) {
+/** "Más Que Un Regalo" section: gift-registry accounts with copy-to-clipboard buttons — local bank accounts, or PayPal/Venmo for guests traveling from abroad. Accounts are admin-managed at /admin/gift-accounts. */
+export function GiftSection({ guest, giftAccountsLocal, giftAccountsAbroad }: GiftSectionProps) {
   const { copiedIndex, copy } = useCopyToClipboard();
   const giftAccounts = guest.guestLocation === "extranjero" ? giftAccountsAbroad : giftAccountsLocal;
 
@@ -29,12 +31,7 @@ export function GiftSection({ guest }: GiftSectionProps) {
         <p className={styles.intro}>{giftIntroCopy}</p>
         <div className={styles.accountList}>
           {giftAccounts.map((account, index) => (
-            // `account.label` isn't unique — giftAccountsLocal has two accounts labeled "CUENTA EN
-            // LEMPIRAS · HONDURAS" (BAC and FICOHSA) and two "CUENTA EN DÓLARES · HONDURAS".
-            // Duplicate keys made React's reconciliation misbehave across re-renders (e.g. toggling
-            // guest location back and forth in the debug panel), showing stale/duplicated cards.
-            // `copyText` (the actual account number/handle) is always unique per account.
-            <div key={`${account.label}-${account.copyText}`} className={styles.accountCard}>
+            <div key={account.id} className={styles.accountCard}>
               <div className={styles.accountHeader}>
                 <div className={styles.accountLabel}>{account.label}</div>
                 <button onClick={() => copy(index, account.copyText)} className={styles.copyButton}>

@@ -2,14 +2,16 @@ import Link from "next/link";
 import { Reveal } from "@/components/ui/Reveal";
 import { GoldDivider } from "@/components/ui/GoldDivider";
 import { Accordion } from "@/components/ui/Accordion";
-import { recommendationCategories } from "@/config/site";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { isHonduranMobileNumber } from "@/lib/phone";
+import type { RecommendationCategory } from "@/types/invitation";
 import styles from "./RecommendationsPage.module.css";
 
 interface RecommendationsPageProps {
   /** Guest's personal invitation token — the return link goes back to their exact `/i/[token]` page. */
   token: string;
+  /** Admin-managed at /admin/recommendations. */
+  categories: RecommendationCategory[];
 }
 
 /**
@@ -17,14 +19,14 @@ interface RecommendationsPageProps {
  * trajes) for guests traveling from abroad. Lives at `/i/[token]/recomendaciones`
  * so the return button can always send the guest back to their own invitation.
  */
-export function RecommendationsPage({ token }: RecommendationsPageProps) {
-  const accordionItems = recommendationCategories.map((category) => ({
+export function RecommendationsPage({ token, categories }: RecommendationsPageProps) {
+  const accordionItems = categories.map((category) => ({
     id: category.id,
     title: category.title,
     content: (
       <div>
         {category.entries.map((entry) => (
-          <div key={entry.name} className={styles.entry}>
+          <div key={entry.id} className={styles.entry}>
             <div className={styles.entryName}>{entry.name}</div>
             {entry.description && <div className={styles.entryDescription}>{entry.description}</div>}
             {(entry.mapsLink || entry.phone || entry.link) && (

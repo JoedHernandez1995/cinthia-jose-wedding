@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { InvitationPage } from "@/components/InvitationPage";
 import { getGuestByToken, toGuestViewModel } from "@/lib/guests";
+import { getGiftAccounts } from "@/lib/content";
 import { siteMetadata } from "@/config/site";
 
 // Always hit the database — this must never be statically cached, since it
@@ -39,5 +40,16 @@ export default async function GuestInvitationPage({ params }: { params: { token:
   const guest = await loadGuest(params.token);
   if (!guest) notFound();
 
-  return <InvitationPage guest={toGuestViewModel(guest)} />;
+  const [giftAccountsLocal, giftAccountsAbroad] = await Promise.all([
+    getGiftAccounts("local"),
+    getGiftAccounts("abroad"),
+  ]);
+
+  return (
+    <InvitationPage
+      guest={toGuestViewModel(guest)}
+      giftAccountsLocal={giftAccountsLocal}
+      giftAccountsAbroad={giftAccountsAbroad}
+    />
+  );
 }

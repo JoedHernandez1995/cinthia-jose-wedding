@@ -57,6 +57,7 @@ alter table guests add column if not exists confirmation_sent_at timestamptz;
 alter table guests add column if not exists confirmation_send_error text;
 create index if not exists guests_checkin_code_idx on guests (checkin_code);
 
+
 -- Optional family/group name shown on the invitation instead of the
 -- individual guest's name (e.g. "Familia Martínez" for Raúl Martínez + 3
 -- plus-ones). Falls back to `name` when null.
@@ -339,3 +340,70 @@ alter table rate_limits enable row level security;
 -- service-role key from trusted server code only (lib/supabase/admin.ts),
 -- which bypasses RLS entirely. Never expose the service-role key to a
 -- "use client" file or a NEXT_PUBLIC_* env var.
+
+-- Gift accounts (bank accounts / Venmo / PayPal / Zelle) — previously hardcoded in config/site.ts,
+-- now admin-managed at /admin/gift-accounts. "local" = shown to Honduras-based guests, "abroad" =
+-- shown to guests traveling from abroad (see guests.guest_location gating).
+create table if not exists gift_accounts (
+  id uuid primary key default gen_random_uuid(),
+  audience text not null check (audience in ('local', 'abroad')),
+  label text not null,
+  primary_line text not null,
+  secondary_line text,
+  copy_text text not null,
+  position int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists gift_accounts_audience_idx on gift_accounts (audience, position);
+alter table gift_accounts enable row level security;
+
+-- Recommendation entries (hospedaje/belleza/trajes) — previously hardcoded in config/site.ts, now
+-- admin-managed at /admin/recommendations. Categories are fixed; only entries within them are
+-- admin-managed.
+create table if not exists recommendation_entries (
+  id uuid primary key default gen_random_uuid(),
+  category text not null check (category in ('hospedaje', 'belleza', 'trajes')),
+  name text not null,
+  description text,
+  maps_link text,
+  phone text,
+  link text,
+  position int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists recommendation_entries_category_idx on recommendation_entries (category, position);
+alter table recommendation_entries enable row level security;
+
+-- One-time seed from the values that previously lived in config/site.ts, so the public site keeps
+-- showing the same content once it switches to reading from these tables. Safe to re-run: skips
+-- rows if the tables are already populated.
+insert into gift_accounts (audience, label, primary_line, secondary_line, copy_text, position)
+select * from (values
+  ('local', 'CUENTA EN LEMPIRAS · HONDURAS', 'BAC Honduras', '#749334921 · José Eduardo Hernandez Alvarado', '749334921', 0),
+  ('local', 'CUENTA EN DÓLARES · HONDURAS', 'BAC Honduras', '#753329341 · José Eduardo Hernandez Alvarado', '753329341', 1),
+  ('local', 'CUENTA EN LEMPIRAS · HONDURAS', 'FICOHSA', '#200021669112 · José Eduardo Hernandez Alvarado', '200021669112', 2),
+  ('local', 'CUENTA EN DÓLARES · HONDURAS', 'FICOHSA', '#200006815517 · José Eduardo Hernandez Alvarado', '200006815517', 3),
+  ('abroad', 'Venmo', '@clopezv10', null, '@clopezv10', 0),
+  ('abroad', 'Paypal', '@Jeha1995', null, '@Jeha1995', 1),
+  ('abroad', 'Zelle', '4798798345', null, '4798798345', 2)
+) as seed(audience, label, primary_line, secondary_line, copy_text, position)
+where not exists (select 1 from gift_accounts);
+
+insert into recommendation_entries (category, name, description, maps_link, phone, link, position)
+select * from (values
+  ('hospedaje', 'Hotel Real Intercontinental', 'Opcion premium a 10 minutos de Hacienda El Trapiche. Frente a Mall Multiplaza Tegucigalpa, con piscina y spa.', 'https://maps.app.goo.gl/ciqmdXhsCjqLTCnu7', '50494612700', 'https://www.ihg.com/intercontinental/hotels/es/es/tegucigalpa/tguha/hoteldetail', 0),
+  ('hospedaje', 'Hotel Clarion', 'A 15 minutos de Hacienda El Trapiche. Los novios se hospedarán aquí, y recomiendan este hotel a los invitados que deseen estar cerca del lugar de la boda y estar cerca de los novios antes y después de la ceremonia.', 'https://maps.app.goo.gl/q4Vv9BQHv1CjXgjt5', '50431900908', 'https://www.choicehotels.com/honduras/tegucigalpa/clarion-hotels/hn004', 1),
+  ('hospedaje', 'Hotel Alameda', 'A 10 minutos de Hacienda El Trapiche. Hotel recien remodelado. Recomendado para invitados que deseen hospedarse cerca del lugar de la boda y disfrutar de un ambiente tranquilo y acogedor.', 'https://maps.app.goo.gl/W2Fx9c8rJmAzo3Nz9', '50422322222', 'https://hotelalameda.hn/', 2),
+  ('hospedaje', 'Hotel Plaza Florencia', 'A 5 minutos de Hacienda El Trapiche. Muy cerca y accesible a todos lados. Recomendado para invitados que deseen hospedarse cerca del lugar de la boda y poder movilizarse fácilmente.', 'https://maps.app.goo.gl/WmRBHj9nf3oVp32v5', '50422296900', 'https://florenciaplazahotel.com/', 3),
+  ('hospedaje', 'Holiday Inn Express Tegucigalpa', 'A 15 minutos de Hacienda El Trapiche y cerca de Mall Multiplaza y Lomas del Mayab. Facil acceso y ambiente relajado.', 'https://www.google.com/maps?q=Holiday+Inn+Express,Colonia+Lomas+del+Mayab,Tegucigalpa,Honduras,11101', '50422753400', 'https://www.ihg.com/holidayinnexpress/hotels/us/en/tegucigalpa/tguex/hoteldetail', 4),
+  ('hospedaje', 'Hyatt Place', 'A 20 minutos de Hacienda El Trapiche. Excelente desayuno. Ubicado en una de las mejores zonas con vida nocturna de Tegucigalpa. Recomendado para invitados que deseen hospedarse en un hotel de lujo y disfrutar de una experiencia completa.', 'https://www.google.com/maps/place/Hyatt+Place+Tegucigalpa/data=!4m2!3m1!1s0x0:0xc877d44ab568cfc1?sa=X&ved=1t:2428&ictx=111', '50422296900', 'https://www.hyatt.com/hyatt-place/en-US/tguzt-hyatt-place-tegucigalpa', 5),
+  ('belleza', 'Oney Beauty Studio', null, null, '+50433875975', 'https://www.instagram.com/oneybeautystudio?igsh=MXQydWt4cm8yeWswcg==', 0),
+  ('belleza', 'MCBSTUDIO', null, null, '+50433909044', 'https://www.instagram.com/mcbstudio?igsh=MTFveWJ4YTFxMmg5cA==', 1),
+  ('belleza', 'Monique pineda Studio', null, null, '+50489137279', 'https://www.bymoniquepineda.com/services-4', 2),
+  ('belleza', 'Diana Hernandez Makeup Artist', null, null, null, 'https://www.instagram.com/dianahmakeup?igsh=MWtmZWx4NnFxY2Vscw==', 3),
+  ('trajes', 'Mr. Tux', null, null, '+50433477851', 'https://www.instagram.com/mr.tuxhonduras?igsh=bGR5bWg5MWJxNWkz', 0),
+  ('trajes', 'Black Tie | Formal Menswear', null, null, '+50494022795', 'https://www.instagram.com/blacktie.hn?igsh=MWdzdXB4enlwenBqeQ==', 1)
+) as seed(category, name, description, maps_link, phone, link, position)
+where not exists (select 1 from recommendation_entries);

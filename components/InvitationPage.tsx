@@ -20,11 +20,14 @@ import { RecommendationsSection } from "@/components/sections/RecommendationsSec
 import { ClosingImageSection } from "@/components/sections/ClosingImageSection";
 import { SiteFooter } from "@/components/sections/SiteFooter";
 import type { GuestViewModel } from "@/types/guest";
+import type { GiftAccount } from "@/types/invitation";
 import styles from "./InvitationPage.module.css";
 
 interface InvitationPageProps {
   /** Always set: rendered only from a guest's personal `/i/[token]` page; root `/` renders `HomeLanding` instead. */
   guest: GuestViewModel;
+  giftAccountsLocal: GiftAccount[];
+  giftAccountsAbroad: GiftAccount[];
 }
 
 /**
@@ -32,7 +35,7 @@ interface InvitationPageProps {
  * its own copy, styling, and local state — this component only decides
  * ordering and the shared page chrome (envelope overlay + fixed nav).
  */
-export function InvitationPage({ guest: initialGuest }: InvitationPageProps) {
+export function InvitationPage({ guest: initialGuest, giftAccountsLocal, giftAccountsAbroad }: InvitationPageProps) {
   const [guest, setGuest] = useState(initialGuest);
   const searchParams = useSearchParams();
   const debugMode = searchParams.get("debug") === "1";
@@ -61,7 +64,7 @@ export function InvitationPage({ guest: initialGuest }: InvitationPageProps) {
         {guest.guestLocation === "extranjero" && <LocationSection />}
         <DressCodeSection />
         <FaqSection guest={guest} />
-        <GiftSection guest={guest} />
+        <GiftSection guest={guest} giftAccountsLocal={giftAccountsLocal} giftAccountsAbroad={giftAccountsAbroad} />
         {guest.guestLocation === "extranjero" && <RecommendationsSection guest={guest} />}
         <ClosingImageSection />
         <SiteFooter />

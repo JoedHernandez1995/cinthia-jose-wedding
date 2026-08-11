@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { RecommendationsPage } from "@/components/RecommendationsPage";
 import { getGuestByToken } from "@/lib/guests";
+import { getRecommendationCategories } from "@/lib/content";
 
 // Always hit the database — mirrors the main `/i/[token]` page.
 export const dynamic = "force-dynamic";
@@ -12,5 +13,7 @@ export default async function GuestRecommendationsPage({ params }: { params: { t
   // Same gating as the in-page teaser: recommendations are only for guests traveling from abroad.
   if (guest.guestLocation !== "extranjero") redirect(`/i/${params.token}`);
 
-  return <RecommendationsPage token={guest.token} />;
+  const categories = await getRecommendationCategories();
+
+  return <RecommendationsPage token={guest.token} categories={categories} />;
 }

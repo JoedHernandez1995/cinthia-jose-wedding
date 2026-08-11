@@ -4,7 +4,11 @@ export interface Faq {
   answer: string;
 }
 
+export type GiftAccountAudience = "local" | "abroad";
+
 export interface GiftAccount {
+  id: string;
+  audience: GiftAccountAudience;
   label: string;
   primaryLine: string;
   secondaryLine?: string;
@@ -16,7 +20,11 @@ export interface CountdownUnit {
   value: string;
 }
 
+export type RecommendationCategoryId = "hospedaje" | "belleza" | "trajes";
+
 export interface RecommendationEntry {
+  id: string;
+  category: RecommendationCategoryId;
   name: string;
   description?: string;
   /** Google Maps link for this place, rendered as "Ver en Google Maps". */
@@ -27,7 +35,7 @@ export interface RecommendationEntry {
 }
 
 export interface RecommendationCategory {
-  id: string;
+  id: RecommendationCategoryId;
   title: string;
   entries: RecommendationEntry[];
 }
