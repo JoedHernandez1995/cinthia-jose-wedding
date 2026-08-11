@@ -27,6 +27,13 @@ export function ParentsBlessingSection() {
     <section className={styles.section}>
       <Reveal>
         <GoldDivider width={28} margin="0 auto 26px" />
+        <div className={styles.namesIntro}>
+          <div className={styles.namesIntroLabel}>Nosotros</div>
+          <div className={styles.namesIntroNames}>
+            <div>Cinthia Linet López Velásquez</div>
+            <div>José Eduardo Hernández Alvarado</div>
+          </div>
+        </div>
         <p className={styles.dedication}>{blessingIntro}</p>
         <div className={styles.columns}>
           <ParentsColumn label={brideParents.label} names={brideParents.names} />

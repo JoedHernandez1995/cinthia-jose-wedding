@@ -4,6 +4,22 @@
   text-align: center;
 }
 
+.namesIntro {
+  margin-bottom: 26px;
+}
+
+.namesIntroLabel {
+  font: 500 10px/1.75 var(--font-label);
+  color: var(--color-gold);
+  margin-bottom: 10px;
+  letter-spacing: 0.15em;
+}
+
+.namesIntroNames {
+  font: 600 italic 16px/1.6 var(--font-serif);
+  color: var(--color-ink);
+}
+
 .dedication {
   font: 400 italic 14.5px/1.85 var(--font-serif);
   color: var(--color-ink-soft);
