@@ -836,16 +836,18 @@ export async function overrideRsvp(id: string, input: SubmitRsvpInput): Promise<
 }
 
 /**
- * Bulk-declares a batch of guests as "no asistirá" — for the admin's end-of-campaign cleanup: once
- * the closure-notice emails have gone out to everyone who viewed the invitation, the guests who
- * never even opened it are assumed to not be coming and get marked "no" en masse instead of one by
- * one. Routes each guest through `overrideRsvp` (not a raw `.in(ids).update()`) so the same
+ * Bulk-declares a batch of still-pending guests as "no asistirá" — manual end-of-campaign cleanup
+ * once the RSVP window has closed. Deliberately manual, not automatic: sending a guest the
+ * closure-notice email (see lib/closureNotice.ts) does NOT itself flip their status, since that
+ * email tells them they can still try to attend via the wedding planner — the admin decides when
+ * (if ever) to give up on a given guest and mark them "no", whether or not they ever opened the
+ * invitation. Routes each guest through `overrideRsvp` (not a raw `.in(ids).update()`) so the same
  * `apply_rsvp` RPC, companion sync, and event log apply as any other admin override — this is a
  * convenience wrapper around that, not a separate write path. Per-guest failures (e.g. a guest
  * already confirmed by the time this runs) are swallowed and counted rather than aborting the
  * whole batch, since a stale selection shouldn't block the guests that are still valid.
  */
-export async function bulkDeclineUnviewedGuests(ids: string[]): Promise<{ succeeded: number; failed: number }> {
+export async function bulkDeclinePendingGuests(ids: string[]): Promise<{ succeeded: number; failed: number }> {
   let succeeded = 0;
   let failed = 0;
   const CONCURRENCY = 5;

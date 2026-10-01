@@ -6,7 +6,7 @@ import {
   DuplicateGuestError,
   GuestValidationError,
   RsvpValidationError,
-  bulkDeclineUnviewedGuests,
+  bulkDeclinePendingGuests,
   bulkMarkInviteSent,
   bulkSetInvitedBy,
   createGuest,
@@ -158,22 +158,50 @@ export async function bulkSetInvitedByAction(formData: FormData): Promise<void> 
 }
 
 /**
- * End-of-campaign cleanup: bulk-declares guests who never opened the invitation as "no asistirá".
+ * End-of-campaign cleanup: bulk-declares still-pending guests (viewed or not) as "no asistirá".
  * Unlike the other bulk actions above, this one reports how many succeeded/failed, since routing
  * each guest through `overrideRsvp` means an individual guest can fail validation (e.g. already
  * confirmed by the time this runs) without the whole batch failing.
  */
-export async function bulkDeclineUnviewedGuestsAction(formData: FormData): Promise<ActionResult> {
+export async function bulkDeclinePendingGuestsAction(formData: FormData): Promise<ActionResult> {
   const ids = String(formData.get("ids") ?? "")
     .split(",")
     .filter(Boolean);
   if (ids.length === 0) return { ok: false, message: "No hay invitados seleccionados." };
 
-  const { succeeded, failed } = await bulkDeclineUnviewedGuests(ids);
+  const { succeeded, failed } = await bulkDeclinePendingGuests(ids);
   revalidatePath("/admin/guests");
   return failed === 0
     ? { ok: true, message: `${succeeded} invitado(s) marcado(s) como "no asistirá".` }
     : { ok: true, message: `${succeeded} invitado(s) marcado(s) como "no asistirá", ${failed} con error.` };
+}
+
+/**
+ * Single-guest version of the above — backs the per-row "Marcar como no asistirá" button for a
+ * still-pending guest once the RSVP window has closed.
+ */
+export async function declineNoShowGuestAction(formData: FormData): Promise<ActionResult> {
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, message: "Falta el invitado." };
+
+  const guest = await getGuestById(id);
+  if (!guest) return { ok: false, message: "Invitado no encontrado." };
+  if (guest.rsvpStatus !== "pending") {
+    return { ok: false, message: `${guest.name} ya respondió.` };
+  }
+
+  try {
+    await overrideRsvp(id, { status: "no", companionNames: [], primaryAttending: true });
+  } catch (error) {
+    if (error instanceof RsvpValidationError) {
+      return { ok: false, message: error.message };
+    }
+    throw error;
+  }
+
+  revalidatePath("/admin/guests");
+  revalidatePath(`/admin/guests/${id}`);
+  return { ok: true, message: `${guest.name} marcado como "no asistirá".` };
 }
 
 export async function regenerateTokenAction(formData: FormData): Promise<void> {

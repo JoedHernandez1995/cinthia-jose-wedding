@@ -8,7 +8,8 @@ import { useAdminConfirm } from "@/components/admin/ConfirmDialog";
 import { formatDateTime as formatDate } from "@/lib/formatDate";
 import { wedding } from "@/config/site";
 import {
-  bulkDeclineUnviewedGuestsAction,
+  bulkDeclinePendingGuestsAction,
+  declineNoShowGuestAction,
   bulkMarkInviteSentAction,
   bulkSetInvitedByAction,
   deleteCompanionAction,
@@ -35,7 +36,8 @@ type PendingAction =
   | "checkin"
   | "rename"
   | "reminderEmail"
-  | "closureNoticeEmail";
+  | "closureNoticeEmail"
+  | "declineNoShow";
 
 export interface CompanionRowView extends GuestCompanion {
   resendLink: string;
@@ -262,6 +264,15 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
     if (guest.rsvpStatus === "pending") {
       items.push({ key: "reminder", label: "Enviar recordatorio", onClick: () => handleSendReminder(guest) });
     }
+    if (isDeclineEligible(guest)) {
+      items.push({
+        key: "declineNoShow",
+        label: isPending && pending?.action === "declineNoShow" ? "Guardando…" : 'Marcar como "no asistirá"',
+        disabled: isPending,
+        danger: true,
+        onClick: () => handleDeclineNoShow(guest),
+      });
+    }
     if (guest.rsvpStatus === "yes") {
       items.push({
         key: "resendConfirmation",
@@ -418,11 +429,13 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
     return guest.rsvpStatus === "pending" && guest.viewCount > 0 && Boolean(guest.email) && pastRsvpDeadline;
   }
 
-  // The "Pendientes · no han visto" bucket — guests who never opened the invitation at all, so the
-  // closure-notice email above doesn't even apply to them (it requires `viewCount > 0`). Once the
-  // closure round has gone out, these are assumed to not be coming and get declared "no" en masse.
-  function isUnviewedPendingEligible(guest: GuestRowView): boolean {
-    return guest.rsvpStatus === "pending" && guest.viewCount === 0;
+  // Any guest still pending once the RSVP window has closed, viewed or not — the admin's manual
+  // call on when to give up on a given guest and declare them "no asistirá". Deliberately not
+  // automatic: sending the closure-notice email (see isClosureNoticeEligible above) does NOT by
+  // itself move a guest here, since that email tells them they can still try to attend via the
+  // wedding planner.
+  function isDeclineEligible(guest: GuestRowView): boolean {
+    return guest.rsvpStatus === "pending" && pastRsvpDeadline;
   }
 
   async function handleSendReminderEmail(guest: GuestRowView) {
@@ -450,6 +463,23 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
       if (result.ok) router.refresh();
     } catch {
       showToast("No se pudo enviar el aviso de cierre.", "error");
+    } finally {
+      setPending(null);
+    }
+  }
+
+  async function handleDeclineNoShow(guest: GuestRowView) {
+    const confirmed = await confirm(`¿Marcar a ${guest.name} como "no asistirá"? Esta acción no se puede deshacer fácilmente.`);
+    if (!confirmed) return;
+    setPending({ id: guest.id, action: "declineNoShow" });
+    try {
+      const formData = new FormData();
+      formData.set("id", guest.id);
+      const result = await declineNoShowGuestAction(formData);
+      showToast(result.message, result.ok ? undefined : "error");
+      if (result.ok) router.refresh();
+    } catch {
+      showToast("No se pudo actualizar el estado.", "error");
     } finally {
       setPending(null);
     }
@@ -514,18 +544,18 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
     }
   }
 
-  async function handleBulkDeclineUnviewed() {
-    const eligible = selectedGuests.filter(isUnviewedPendingEligible);
+  async function handleBulkDeclinePending() {
+    const eligible = selectedGuests.filter(isDeclineEligible);
     if (eligible.length === 0) return;
     const confirmed = await confirm(
-      `¿Marcar a ${eligible.length} invitado(s) que nunca vieron la invitación como "no asistirá"? Esta acción no se puede deshacer fácilmente.`,
+      `¿Marcar a ${eligible.length} invitado(s) pendiente(s) como "no asistirá"? Esta acción no se puede deshacer fácilmente.`,
     );
     if (!confirmed) return;
     setBulkDeclinePending(true);
     try {
       const formData = new FormData();
       formData.set("ids", eligible.map((g) => g.id).join(","));
-      const result = await bulkDeclineUnviewedGuestsAction(formData);
+      const result = await bulkDeclinePendingGuestsAction(formData);
       router.refresh();
       showToast(result.message, result.ok ? undefined : "error");
       setSelectedIds(new Set());
@@ -623,11 +653,11 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
               type="button"
               className={styles.actionButtonDanger}
               disabled={bulkDeclinePending}
-              onClick={handleBulkDeclineUnviewed}
+              onClick={handleBulkDeclinePending}
             >
               {bulkDeclinePending
                 ? "Guardando…"
-                : `Marcar como "no asistirá" (${selectedGuests.filter(isUnviewedPendingEligible).length})`}
+                : `Marcar como "no asistirá" (${selectedGuests.filter(isDeclineEligible).length})`}
             </button>
           </div>
 
