@@ -1,7 +1,8 @@
 import "server-only";
 import { Resend } from "resend";
 import { requireEnv } from "@/lib/env";
-import { coupleNames, wedding } from "@/config/site";
+import { coupleNames, faqContact, plannerWhatsAppNumber, wedding, whatsappMessages } from "@/config/site";
+import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { brandColors } from "@/lib/brandTheme";
 
 function getResendClient(): Resend {
@@ -235,6 +236,79 @@ export async function sendRsvpReminderEmail({ to, guestName, token }: SendRsvpRe
     to,
     subject: `Todavía esperamos tu confirmación — Boda ${coupleNames.full}`,
     html: buildReminderEmailHtml(guestName, rsvpLink),
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export interface SendRsvpClosureEmailInput {
+  to: string;
+  guestName: string;
+}
+
+/**
+ * Same hand-written inline-styled HTML approach as the other two templates — a one-time, manually
+ * triggered email (never part of the automated reminder cadence) for a guest who viewed the
+ * invitation but never responded before `wedding.rsvpDeadlineIso`. Tells them the window closed,
+ * but leaves the door open: they can still try to attend by reaching the planner directly, with
+ * the caveat that a plate/seat isn't guaranteed past the deadline. The WhatsApp CTA is a `wa.me`
+ * deep link, same channel used everywhere else a guest reaches the planner (see "How WhatsApp is
+ * actually used" in CLAUDE.md) — not a mailto, since the planner's contact point in this app has
+ * always been WhatsApp, never email.
+ */
+function buildClosureEmailHtml(guestName: string, plannerLink: string): string {
+  const siteUrl = getSiteUrl();
+
+  return `
+    <div style="background: ${brandColors.bg}; padding: 32px 16px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
+      <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid ${brandColors.border};">
+        <div style="padding: 36px 32px 28px; text-align: center;">
+          <img src="${siteUrl}/assets/monogram.png" alt="${coupleNames.full}" width="48" style="margin-bottom: 16px;" />
+          <h1 style="margin: 0 0 10px; font: 400 26px/1.3 Georgia, 'Times New Roman', serif; color: ${brandColors.ink};">
+            ${coupleNames.full}
+          </h1>
+          <div style="width: 48px; height: 2px; background: ${brandColors.gold}; margin: 0 auto 18px;"></div>
+          <p style="margin: 0 0 14px; font-size: 15px; line-height: 1.6; color: ${brandColors.muted};">
+            ${guestName ? `${guestName}, l` : "L"}a fecha para confirmar tu asistencia ya pasó, y nos hubiera encantado
+            contar con vos en este día tan especial.
+          </p>
+          <p style="margin: 0 0 14px; font-size: 15px; line-height: 1.6; color: ${brandColors.muted};">
+            Si todavía querés acompañarnos, podés escribirle a <b>${faqContact.name}</b>, nuestra wedding planner, y
+            con gusto revisará si todavía hay disponibilidad para incluirte.
+          </p>
+          <p style="margin: 0; font-size: 15px; line-height: 1.6; color: ${brandColors.muted};">
+            Como la fecha límite ya pasó, en este momento no podemos garantizar tu lugar, pero haremos lo posible
+            por ayudarte.
+          </p>
+        </div>
+
+        <div style="padding: 0 32px 32px; text-align: center;">
+          <a href="${plannerLink}" target="_blank" rel="noopener" style="display: inline-block; background: ${brandColors.gold}; color: #ffffff; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-decoration: none; padding: 12px 24px; border-radius: 4px;">
+            Escribirle a ${faqContact.name}
+          </a>
+        </div>
+
+        <div style="padding: 16px 32px; background: ${brandColors.bgAlt}; border-top: 1px solid ${brandColors.border}; text-align: center;">
+          <p style="margin: 0; font-size: 11px; letter-spacing: 0.05em; color: ${brandColors.taupeLight};">
+            ${coupleNames.full} · ${wedding.dateLabel}
+          </p>
+        </div>
+      </div>
+    </div>`;
+}
+
+export async function sendRsvpClosureEmail({ to, guestName }: SendRsvpClosureEmailInput): Promise<void> {
+  const resend = getResendClient();
+  const fromEmail = requireEnv("RESEND_FROM_EMAIL");
+  const plannerLink = buildWhatsAppLink(plannerWhatsAppNumber, whatsappMessages.rsvpWindowClosedInquiry(guestName));
+
+  const { error } = await resend.emails.send({
+    from: fromEmail,
+    to,
+    subject: `La confirmación ya cerró — Boda ${coupleNames.full}`,
+    html: buildClosureEmailHtml(guestName, plannerLink),
   });
 
   if (error) {

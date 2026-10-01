@@ -6,6 +6,7 @@ import {
   DuplicateGuestError,
   GuestValidationError,
   RsvpValidationError,
+  bulkDeclineUnviewedGuests,
   bulkMarkInviteSent,
   bulkSetInvitedBy,
   createGuest,
@@ -23,6 +24,7 @@ import {
   upsertGuestsFromCsv,
 } from "@/lib/guests";
 import { sendGuestReminder } from "@/lib/reminder";
+import { isClosureNoticeEligible, sendGuestClosureNotice } from "@/lib/closureNotice";
 import type { CsvUploadResult, GuestLocation, InvitedBy, RsvpStatus } from "@/types/guest";
 
 const INVITED_BY_VALUES: InvitedBy[] = ["novio", "novia", "padres_novio", "padres_novia"];
@@ -155,6 +157,25 @@ export async function bulkSetInvitedByAction(formData: FormData): Promise<void> 
   revalidatePath("/admin/guests");
 }
 
+/**
+ * End-of-campaign cleanup: bulk-declares guests who never opened the invitation as "no asistirá".
+ * Unlike the other bulk actions above, this one reports how many succeeded/failed, since routing
+ * each guest through `overrideRsvp` means an individual guest can fail validation (e.g. already
+ * confirmed by the time this runs) without the whole batch failing.
+ */
+export async function bulkDeclineUnviewedGuestsAction(formData: FormData): Promise<ActionResult> {
+  const ids = String(formData.get("ids") ?? "")
+    .split(",")
+    .filter(Boolean);
+  if (ids.length === 0) return { ok: false, message: "No hay invitados seleccionados." };
+
+  const { succeeded, failed } = await bulkDeclineUnviewedGuests(ids);
+  revalidatePath("/admin/guests");
+  return failed === 0
+    ? { ok: true, message: `${succeeded} invitado(s) marcado(s) como "no asistirá".` }
+    : { ok: true, message: `${succeeded} invitado(s) marcado(s) como "no asistirá", ${failed} con error.` };
+}
+
 export async function regenerateTokenAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (id) await regenerateToken(id);
@@ -229,6 +250,29 @@ export async function sendReminderEmailAction(formData: FormData): Promise<Actio
   return sent
     ? { ok: true, message: `Recordatorio enviado a ${guest.name}.` }
     : { ok: false, message: `No se pudo enviar el recordatorio a ${guest.name}.` };
+}
+
+/**
+ * Sends the one-time "the RSVP window closed" email. Called both from the per-row button and,
+ * once per selected guest, from the bulk closure-notice queue's client-side loop — same reasoning
+ * as `sendReminderEmailAction` above for why the fan-out lives client-side.
+ */
+export async function sendClosureNoticeEmailAction(formData: FormData): Promise<ActionResult> {
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, message: "Falta el invitado." };
+
+  const guest = await getGuestById(id);
+  if (!guest) return { ok: false, message: "Invitado no encontrado." };
+  if (!isClosureNoticeEligible(guest)) {
+    return { ok: false, message: `${guest.name} no califica para el aviso de cierre.` };
+  }
+
+  const sent = await sendGuestClosureNotice(guest);
+  revalidatePath("/admin/guests");
+  revalidatePath(`/admin/guests/${id}`);
+  return sent
+    ? { ok: true, message: `Aviso de cierre enviado a ${guest.name}.` }
+    : { ok: false, message: `No se pudo enviar el aviso de cierre a ${guest.name}.` };
 }
 
 export async function overrideRsvpAction(_prevState: ActionResult | null, formData: FormData): Promise<ActionResult> {

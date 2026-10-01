@@ -58,6 +58,11 @@ export const whatsappMessages = {
   // always be spelled out in the text itself — she has no other way to know who's writing her.
   rsvpLastMinute: (guestName: string): string =>
     `Hola, soy ${guestName}. La confirmación para la boda de Cinthia & José ya cerró, pero necesito avisarles de un cambio de último momento en mi respuesta.`,
+  // For a guest who never responded at all before the deadline — distinct wording from
+  // `rsvpLastMinute` above, since there's no existing response to "change," just an open question
+  // about whether a seat/plate can still be arranged.
+  rsvpWindowClosedInquiry: (guestName: string): string =>
+    `Hola, soy ${guestName}. Vi que la confirmación para la boda de Cinthia & José ya cerró, pero me encantaría saber si todavía hay disponibilidad para asistir.`,
   dressCodeQuestion: "¡Hola! Tengo una duda sobre el código de vestimenta para la boda de Cinthia & José.",
   // Same "who's writing" reasoning as rsvpLastMinute — go by the family display name only when one
   // is actually set AND there's room for others (partySizeAllowed > 1); otherwise use the guest's

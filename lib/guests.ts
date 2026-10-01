@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { sendGuestConfirmation } from "@/lib/confirmation";
-import { wedding } from "@/config/site";
+import { faqContact, wedding } from "@/config/site";
 import type {
   ActivityEntry,
   CheckinResult,
@@ -46,6 +46,8 @@ interface GuestRow {
   confirmation_send_error: string | null;
   reminder_sent_at: string | null;
   reminder_send_error: string | null;
+  closure_notice_sent_at: string | null;
+  closure_notice_send_error: string | null;
   checked_in: boolean;
   checked_in_at: string | null;
   first_viewed_at: string | null;
@@ -101,6 +103,8 @@ function mapRow(row: GuestRow, companions: GuestCompanion[]): Guest {
     confirmationSendError: row.confirmation_send_error,
     reminderSentAt: row.reminder_sent_at,
     reminderSendError: row.reminder_send_error,
+    closureNoticeSentAt: row.closure_notice_sent_at,
+    closureNoticeSendError: row.closure_notice_send_error,
     firstViewedAt: row.first_viewed_at,
     lastViewedAt: row.last_viewed_at,
     viewCount: row.view_count,
@@ -324,6 +328,21 @@ export async function markReminderFailed(id: string, message: string): Promise<v
   if (error) throw error;
 }
 
+export async function markClosureNoticeSent(id: string): Promise<void> {
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase
+    .from("guests")
+    .update({ closure_notice_sent_at: new Date().toISOString(), closure_notice_send_error: null })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function markClosureNoticeFailed(id: string, message: string): Promise<void> {
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("guests").update({ closure_notice_send_error: message }).eq("id", id);
+  if (error) throw error;
+}
+
 export async function regenerateToken(id: string): Promise<string> {
   const supabase = createSupabaseAdminClient();
   // Short (12 hex chars) to match the DB default — friendlier to share over WhatsApp than a full UUID.
@@ -379,6 +398,17 @@ function rsvpRpcErrorMessage(error: { message?: string }): string | null {
 export async function submitRsvp(token: string, input: SubmitRsvpInput): Promise<{ guest: Guest; confirmationSent: boolean }> {
   const guest = await getGuestByToken(token);
   if (!guest) throw new RsvpValidationError("Invitado no encontrado.");
+
+  // The UI already hides the RSVP buttons/edit link past the deadline (see `RsvpSection`'s
+  // `showChoiceButtons`/`showClosedContact`), but this is the actual enforcement — a direct call
+  // to this action (or a stale page left open across the deadline) must not be able to write a
+  // self-serve RSVP after the window closes, whether the guest never responded or is trying to
+  // edit an existing response. Past this point, changes only happen via `overrideRsvp` (admin).
+  if (Date.now() > new Date(wedding.rsvpDeadlineIso).getTime()) {
+    throw new RsvpValidationError(
+      `El tiempo para confirmar tu asistencia ya cerró. Si todavía quieres asistir, comunícate con ${faqContact.name}, nuestra wedding planner.`,
+    );
+  }
 
   const companionNames = input.status === "yes" ? input.companionNames.map((n) => n.trim()).filter(Boolean) : [];
   const maxCompanions = guest.partySizeAllowed - 1;
@@ -803,6 +833,39 @@ export async function overrideRsvp(id: string, input: SubmitRsvpInput): Promise<
   const confirmationSent = await sendGuestConfirmation(updatedGuest);
 
   return { guest: updatedGuest, confirmationSent };
+}
+
+/**
+ * Bulk-declares a batch of guests as "no asistirá" — for the admin's end-of-campaign cleanup: once
+ * the closure-notice emails have gone out to everyone who viewed the invitation, the guests who
+ * never even opened it are assumed to not be coming and get marked "no" en masse instead of one by
+ * one. Routes each guest through `overrideRsvp` (not a raw `.in(ids).update()`) so the same
+ * `apply_rsvp` RPC, companion sync, and event log apply as any other admin override — this is a
+ * convenience wrapper around that, not a separate write path. Per-guest failures (e.g. a guest
+ * already confirmed by the time this runs) are swallowed and counted rather than aborting the
+ * whole batch, since a stale selection shouldn't block the guests that are still valid.
+ */
+export async function bulkDeclineUnviewedGuests(ids: string[]): Promise<{ succeeded: number; failed: number }> {
+  let succeeded = 0;
+  let failed = 0;
+  const CONCURRENCY = 5;
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < ids.length) {
+      const id = ids[cursor];
+      cursor += 1;
+      try {
+        await overrideRsvp(id, { status: "no", companionNames: [], primaryAttending: true });
+        succeeded += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, ids.length) }, worker));
+  return { succeeded, failed };
 }
 
 function csvEscape(value: string): string {

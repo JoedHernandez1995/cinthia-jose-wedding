@@ -177,6 +177,14 @@
   border-bottom: none;
 }
 
+/* Shrink every column to its content width except Nombre (2nd column) — otherwise the browser's
+   auto table layout hands leftover width to whichever column has the most content, which since
+   Acciones holds several buttons ends up stretching it far past what it needs. */
+.table > thead > tr > th:not(:nth-child(2)),
+.table > tbody > tr > td:not([colspan]):not(:nth-child(2)) {
+  width: 1%;
+}
+
 .mono {
   font-family: monospace;
 }
@@ -184,6 +192,22 @@
 .nameLink {
   font-weight: 500;
   color: var(--color-ink);
+}
+
+.rowExpandable {
+  cursor: pointer;
+}
+.rowExpandable:hover td {
+  background: var(--color-bg);
+}
+
+.companionToggleHint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--color-muted-light);
 }
 
 .badgeYes,

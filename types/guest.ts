@@ -45,6 +45,9 @@ export interface Guest {
   confirmationSendError: string | null;
   reminderSentAt: string | null;
   reminderSendError: string | null;
+  /** The one-time "the RSVP window closed" email, sent manually by the admin after the deadline to guests who viewed but never responded. */
+  closureNoticeSentAt: string | null;
+  closureNoticeSendError: string | null;
   firstViewedAt: string | null;
   lastViewedAt: string | null;
   viewCount: number;

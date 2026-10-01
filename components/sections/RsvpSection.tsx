@@ -46,7 +46,13 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
   // those who never did — and they're routed to the planner instead.
   const showChoiceButtons = mode === "choosing" && !(pastDeadline && neverResponded);
   const showClosedContact = pastDeadline && (mode === "confirmed" || (mode === "choosing" && neverResponded));
-  const plannerLastMinuteLink = buildWhatsAppLink(plannerWhatsAppNumber, whatsappMessages.rsvpLastMinute(guest.name));
+  // Distinct wording depending on whether there's an existing response to change ("last minute
+  // change") or none at all ("is there still room for me?") — see the two `whatsappMessages`
+  // entries for why.
+  const plannerLastMinuteLink = buildWhatsAppLink(
+    plannerWhatsAppNumber,
+    neverResponded ? whatsappMessages.rsvpWindowClosedInquiry(guest.name) : whatsappMessages.rsvpLastMinute(guest.name),
+  );
 
   async function performSubmit(
     nextStatus: Exclude<RsvpStatus, "pending">,
@@ -100,8 +106,10 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
     <RsvpShell>
       {showClosedContact && neverResponded && (
         <p className={styles.confirmationNo}>
-          El tiempo para confirmar tu asistencia ya se cerró, te vamos a extrañar. Podés contactarte con{" "}
-          {faqContact.name} si tenés cualquier duda.
+          El tiempo para confirmar tu asistencia ya se cerró y nos hubiera encantado contar con vos ese día. Si
+          todavía querés intentar asistir, podés escribirle a {faqContact.name}, nuestra wedding planner, para que
+          revise la disponibilidad — eso sí, pasada esta fecha ya no podemos garantizarte un plato de comida ni una
+          silla en la mesa.
         </p>
       )}
 
@@ -220,7 +228,7 @@ export function RsvpSection({ guest }: RsvpSectionProps) {
             </p>
           )}
           <GoldButtonLink href={plannerLastMinuteLink} target="_blank" rel="noopener">
-            Contactar a {faqContact.name}
+            {neverResponded ? `Escribirle a ${faqContact.name}` : `Contactar a ${faqContact.name}`}
           </GoldButtonLink>
         </div>
       ) : (

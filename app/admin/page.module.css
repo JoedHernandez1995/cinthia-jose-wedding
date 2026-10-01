@@ -41,6 +41,12 @@
   margin-top: 6px;
 }
 
+.primaryCardSub {
+  font: 500 11px/1.4 var(--font-label);
+  color: var(--color-muted-light);
+  margin-top: 2px;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

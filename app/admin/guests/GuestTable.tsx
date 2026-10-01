@@ -1,13 +1,14 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
-import { wedding } from "@/config/site";
 import type { Guest, GuestCompanion } from "@/types/guest";
 import { useAdminToast } from "@/components/admin/Toast";
 import { useAdminConfirm } from "@/components/admin/ConfirmDialog";
 import { formatDateTime as formatDate } from "@/lib/formatDate";
+import { wedding } from "@/config/site";
 import {
+  bulkDeclineUnviewedGuestsAction,
   bulkMarkInviteSentAction,
   bulkSetInvitedByAction,
   deleteCompanionAction,
@@ -15,15 +16,26 @@ import {
   markInviteSentAction,
   regenerateTokenAction,
   renameCompanionAction,
+  sendClosureNoticeEmailAction,
   sendReminderEmailAction,
   toggleCompanionCheckedInAction,
   toggleGuestCheckedInAction,
 } from "./actions";
 import { BulkSendQueue } from "./BulkSendQueue";
 import { BulkReminderQueue } from "./BulkReminderQueue";
+import { BulkClosureNoticeQueue } from "./BulkClosureNoticeQueue";
+import { RowActionsMenu, type RowActionItem } from "./RowActionsMenu";
 import styles from "./GuestTable.module.css";
 
-type PendingAction = "whatsapp" | "regenerate" | "delete" | "resend" | "checkin" | "rename" | "reminderEmail";
+type PendingAction =
+  | "whatsapp"
+  | "regenerate"
+  | "delete"
+  | "resend"
+  | "checkin"
+  | "rename"
+  | "reminderEmail"
+  | "closureNoticeEmail";
 
 export interface CompanionRowView extends GuestCompanion {
   resendLink: string;
@@ -54,6 +66,20 @@ interface GuestGroup {
   key: string;
   label: string;
   rows: GuestRowView[];
+  personTotal: number;
+}
+
+// Headcount for a single invitation: confirmed rows have an exact count; a "no" always means the
+// whole invited party declined (the "some companions still attend" case is represented as status
+// "yes" with primaryAttending: false instead — never "no"), so partySizeAllowed is exact there too.
+// Pending rows haven't said how many will actually come, so partySizeAllowed is an upper bound.
+function personCount(g: GuestRowView): number {
+  if (g.rsvpStatus === "yes") return g.rsvpAttendingCount ?? 0;
+  return g.partySizeAllowed;
+}
+
+function personTotal(rows: GuestRowView[]): number {
+  return rows.reduce((sum, g) => sum + personCount(g), 0);
 }
 
 export function GuestTable({ guests }: { guests: GuestRowView[] }) {
@@ -70,11 +96,19 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
   const [emailReminderQueue, setEmailReminderQueue] = useState<{ guests: GuestRowView[]; excludedCount: number } | null>(
     null,
   );
+  const [closureNoticeQueue, setClosureNoticeQueue] = useState<{ guests: GuestRowView[]; excludedCount: number } | null>(
+    null,
+  );
   const [bulkMarkPending, setBulkMarkPending] = useState(false);
   const [bulkSideValue, setBulkSideValue] = useState("");
   const [bulkSidePending, setBulkSidePending] = useState(false);
+  const [bulkDeclinePending, setBulkDeclinePending] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const pastDeadline = Date.now() > new Date(wedding.rsvpDeadlineIso).getTime();
+  const [expandedCompanions, setExpandedCompanions] = useState<Set<string>>(new Set());
+
+  // Recomputed every render (not hoisted to module scope) so a dashboard left open across the
+  // deadline picks up the change without a reload.
+  const pastRsvpDeadline = Date.now() > new Date(wedding.rsvpDeadlineIso).getTime();
 
   async function handleSendWhatsApp(guest: GuestRowView) {
     // Open synchronously (before any await) so popup blockers don't swallow it.
@@ -218,6 +252,43 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
     }
   }
 
+  // Everything except "Editar" (kept inline in the row) lives behind the row's "⋯" menu — see
+  // RowActionsMenu. Order roughly follows how often each action gets used.
+  // "Enviar WhatsApp", "Enviar recordatorio por correo" (when eligible), and "Eliminar" are pinned
+  // as always-visible buttons in the row instead — this menu only holds the less-frequent rest.
+  function buildRowActions(guest: GuestRowView): RowActionItem[] {
+    const isPending = pending?.id === guest.id;
+    const items: RowActionItem[] = [];
+    if (guest.rsvpStatus === "pending") {
+      items.push({ key: "reminder", label: "Enviar recordatorio", onClick: () => handleSendReminder(guest) });
+    }
+    if (guest.rsvpStatus === "yes") {
+      items.push({
+        key: "resendConfirmation",
+        label: "Reenviar comprobante",
+        onClick: () => handleResendConfirmation(guest),
+      });
+      items.push({
+        key: "checkin",
+        label:
+          isPending && pending?.action === "checkin"
+            ? "Guardando…"
+            : guest.checkedIn
+              ? "Deshacer check-in"
+              : "Marcar llegada",
+        disabled: isPending,
+        onClick: () => handleToggleGuestCheckedIn(guest),
+      });
+    }
+    items.push({
+      key: "regenerate",
+      label: isPending && pending?.action === "regenerate" ? "Regenerando…" : "Regenerar link",
+      disabled: isPending,
+      onClick: () => handleRegenerateLink(guest),
+    });
+    return items;
+  }
+
   function matchesSearch(g: GuestRowView, q: string): boolean {
     if (!q) return true;
     const matchesCompanion = g.companionNames.some((name) => name.toLowerCase().includes(q));
@@ -258,10 +329,20 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
       else pendingNotViewed.push(g);
     }
     return [
-      { key: "confirmed", label: "Confirmados", rows: confirmed },
-      { key: "pendingViewed", label: "Pendientes · vieron la invitación", rows: pendingViewed },
-      { key: "pendingNotViewed", label: "Pendientes · no han visto", rows: pendingNotViewed },
-      { key: "declined", label: "No asistirán", rows: declined },
+      { key: "confirmed", label: "Confirmados", rows: confirmed, personTotal: personTotal(confirmed) },
+      {
+        key: "pendingViewed",
+        label: "Pendientes · vieron la invitación",
+        rows: pendingViewed,
+        personTotal: personTotal(pendingViewed),
+      },
+      {
+        key: "pendingNotViewed",
+        label: "Pendientes · no han visto",
+        rows: pendingNotViewed,
+        personTotal: personTotal(pendingNotViewed),
+      },
+      { key: "declined", label: "No asistirán", rows: declined, personTotal: personTotal(declined) },
     ];
   }, [filtered]);
 
@@ -300,15 +381,48 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
     });
   }
 
+  function toggleCompanionsExpanded(guestId: string) {
+    setExpandedCompanions((prev) => {
+      const next = new Set(prev);
+      if (next.has(guestId)) next.delete(guestId);
+      else next.add(guestId);
+      return next;
+    });
+  }
+
+  // Clicking anywhere on a guest row toggles its companions, except when the click originated from
+  // an interactive element inside the row (checkbox, name link, row-actions menu) — those already
+  // have their own behavior and shouldn't also trigger the accordion.
+  function handleRowClick(event: MouseEvent<HTMLTableRowElement>, guest: GuestRowView) {
+    if (guest.companions.length === 0) return;
+    if ((event.target as HTMLElement).closest("a, button, input")) return;
+    toggleCompanionsExpanded(guest.id);
+  }
+
   function handleSendReminder(guest: GuestRowView) {
     window.open(guest.reminderLink, "_blank", "noopener");
   }
 
   // Only guests who opened the invitation but haven't responded — and have an email on file —
   // are candidates for the reminder *email* (distinct from the WhatsApp reminder above, which
-  // only requires `rsvpStatus === "pending"`).
+  // only requires `rsvpStatus === "pending"`). Once the deadline passes, nudging them to RSVP no
+  // longer makes sense — `isClosureNoticeEligible` below takes over from that point.
   function isReminderEmailEligible(guest: GuestRowView): boolean {
-    return guest.rsvpStatus === "pending" && guest.viewCount > 0 && Boolean(guest.email);
+    return guest.rsvpStatus === "pending" && guest.viewCount > 0 && Boolean(guest.email) && !pastRsvpDeadline;
+  }
+
+  // Mirrors `isClosureNoticeEligible` in lib/closureNotice.ts — duplicated here (not imported)
+  // because that module pulls in `server-only`, the same reasoning `isReminderEmailEligible` above
+  // already follows for its own eligibility check.
+  function isClosureNoticeEligible(guest: GuestRowView): boolean {
+    return guest.rsvpStatus === "pending" && guest.viewCount > 0 && Boolean(guest.email) && pastRsvpDeadline;
+  }
+
+  // The "Pendientes · no han visto" bucket — guests who never opened the invitation at all, so the
+  // closure-notice email above doesn't even apply to them (it requires `viewCount > 0`). Once the
+  // closure round has gone out, these are assumed to not be coming and get declared "no" en masse.
+  function isUnviewedPendingEligible(guest: GuestRowView): boolean {
+    return guest.rsvpStatus === "pending" && guest.viewCount === 0;
   }
 
   async function handleSendReminderEmail(guest: GuestRowView) {
@@ -326,6 +440,21 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
     }
   }
 
+  async function handleSendClosureNoticeEmail(guest: GuestRowView) {
+    setPending({ id: guest.id, action: "closureNoticeEmail" });
+    try {
+      const formData = new FormData();
+      formData.set("id", guest.id);
+      const result = await sendClosureNoticeEmailAction(formData);
+      showToast(result.message, result.ok ? undefined : "error");
+      if (result.ok) router.refresh();
+    } catch {
+      showToast("No se pudo enviar el aviso de cierre.", "error");
+    } finally {
+      setPending(null);
+    }
+  }
+
   function openInviteQueue() {
     setQueue({ kind: "invite", guests: selectedGuests, excludedCount: 0 });
   }
@@ -338,6 +467,11 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
   function openEmailReminderQueue() {
     const eligible = selectedGuests.filter(isReminderEmailEligible);
     setEmailReminderQueue({ guests: eligible, excludedCount: selectedGuests.length - eligible.length });
+  }
+
+  function openClosureNoticeQueue() {
+    const eligible = selectedGuests.filter(isClosureNoticeEligible);
+    setClosureNoticeQueue({ guests: eligible, excludedCount: selectedGuests.length - eligible.length });
   }
 
   async function handleBulkMarkSent() {
@@ -377,6 +511,28 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
       showToast("No se pudo actualizar el lado en lote.", "error");
     } finally {
       setBulkSidePending(false);
+    }
+  }
+
+  async function handleBulkDeclineUnviewed() {
+    const eligible = selectedGuests.filter(isUnviewedPendingEligible);
+    if (eligible.length === 0) return;
+    const confirmed = await confirm(
+      `¿Marcar a ${eligible.length} invitado(s) que nunca vieron la invitación como "no asistirá"? Esta acción no se puede deshacer fácilmente.`,
+    );
+    if (!confirmed) return;
+    setBulkDeclinePending(true);
+    try {
+      const formData = new FormData();
+      formData.set("ids", eligible.map((g) => g.id).join(","));
+      const result = await bulkDeclineUnviewedGuestsAction(formData);
+      router.refresh();
+      showToast(result.message, result.ok ? undefined : "error");
+      setSelectedIds(new Set());
+    } catch {
+      showToast("No se pudo actualizar el estado en lote.", "error");
+    } finally {
+      setBulkDeclinePending(false);
     }
   }
 
@@ -431,6 +587,11 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
             <button type="button" className={styles.actionButton} onClick={openEmailReminderQueue}>
               Enviar recordatorio por correo ({selectedGuests.filter(isReminderEmailEligible).length})
             </button>
+            {pastRsvpDeadline && (
+              <button type="button" className={styles.actionButton} onClick={openClosureNoticeQueue}>
+                Enviar aviso de cierre ({selectedGuests.filter(isClosureNoticeEligible).length})
+              </button>
+            )}
           </div>
 
           <div className={styles.bulkCluster}>
@@ -458,6 +619,16 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                 {bulkSidePending ? "Guardando…" : `Asignar lado (${selectedGuests.length})`}
               </button>
             </div>
+            <button
+              type="button"
+              className={styles.actionButtonDanger}
+              disabled={bulkDeclinePending}
+              onClick={handleBulkDeclineUnviewed}
+            >
+              {bulkDeclinePending
+                ? "Guardando…"
+                : `Marcar como "no asistirá" (${selectedGuests.filter(isUnviewedPendingEligible).length})`}
+            </button>
           </div>
 
           <div className={styles.bulkCluster}>
@@ -483,11 +654,6 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
               <th>Nombre</th>
               <th>Lado</th>
               <th>Procedencia</th>
-              <th>WhatsApp</th>
-              <th>Personas</th>
-              <th>Invitación</th>
-              <th>Vistas</th>
-              <th>RSVP</th>
               <th>Check-in</th>
               <th>Acciones</th>
             </tr>
@@ -495,7 +661,7 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={11} className={styles.empty}>
+                <td colSpan={6} className={styles.empty}>
                   No hay invitados que coincidan.
                   {matchesOutsideTab.length > 0 && (
                     <div className={styles.emptyHint}>
@@ -511,7 +677,7 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                 return (
                 <Fragment key={group.key}>
                   <tr className={styles.groupHeaderRow}>
-                    <td colSpan={11}>
+                    <td colSpan={6}>
                       <button
                         type="button"
                         className={styles.groupHeaderButton}
@@ -519,20 +685,28 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                         aria-expanded={!collapsed}
                       >
                         <span className={`${styles.groupChevron} ${collapsed ? styles.groupChevronCollapsed : ""}`}>▾</span>
-                        {group.label} ({group.rows.length})
+                        {group.label} ({group.rows.length} invitación{group.rows.length === 1 ? "" : "es"} ·{" "}
+                        {group.personTotal} persona{group.personTotal === 1 ? "" : "s"}
+                        {group.key !== "confirmed" && group.key !== "declined" ? " máx." : ""})
                       </button>
                     </td>
                   </tr>
                   {collapsed ? null : group.rows.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className={styles.groupEmpty}>
+                      <td colSpan={6} className={styles.groupEmpty}>
                         Sin invitados en este grupo.
                       </td>
                     </tr>
                   ) : (
-                    group.rows.map((guest) => (
+                    group.rows.map((guest) => {
+                      const hasCompanions = guest.companions.length > 0;
+                      const companionsExpanded = hasCompanions && expandedCompanions.has(guest.id);
+                      return (
                       <Fragment key={guest.id}>
-                        <tr>
+                        <tr
+                          className={hasCompanions ? styles.rowExpandable : undefined}
+                          onClick={(event) => handleRowClick(event, guest)}
+                        >
                   <td>
                     <input
                       type="checkbox"
@@ -545,6 +719,14 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                     <a href={`/admin/guests/${guest.id}`} className={styles.nameLink}>
                       {guest.name}
                     </a>
+                    {hasCompanions && (
+                      <span className={styles.companionToggleHint}>
+                        <span className={`${styles.groupChevron} ${companionsExpanded ? "" : styles.groupChevronCollapsed}`}>
+                          ▾
+                        </span>
+                        {guest.companions.length} acompañante{guest.companions.length === 1 ? "" : "s"}
+                      </span>
+                    )}
                   </td>
                   <td>
                     {guest.invitedBy === "novio" && <span className={styles.badgeSide}>Novio</span>}
@@ -557,38 +739,6 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                     {guest.guestLocation === "extranjero" && <span className={styles.badgeLocation}>Extranjero</span>}
                     {guest.guestLocation === "local" && <span className={styles.badgeLocation}>Local</span>}
                     {!guest.guestLocation && <span className={styles.badgePending}>Sin definir</span>}
-                  </td>
-                  <td className={styles.mono}>{guest.whatsappNumber}</td>
-                  <td>{guest.partySizeAllowed}</td>
-                  <td>
-                    {guest.inviteSent ? (
-                      <span className={styles.badgeSent}>Enviada {formatDate(guest.inviteSentAt)}</span>
-                    ) : (
-                      <span className={styles.badgePending}>No enviada</span>
-                    )}
-                  </td>
-                  <td>
-                    {guest.viewCount > 0 ? (
-                      <span title={`Última vez: ${formatDate(guest.lastViewedAt)}`}>
-                        {guest.viewCount}× · {formatDate(guest.firstViewedAt)}
-                      </span>
-                    ) : (
-                      <span className={styles.badgePending}>Sin ver</span>
-                    )}
-                  </td>
-                  <td>
-                    {guest.rsvpStatus === "yes" && (
-                      <span className={styles.badgeYes}>
-                        {guest.primaryAttending === false ? "Sí (sin el invitado)" : "Sí"} · {guest.rsvpAttendingCount}
-                      </span>
-                    )}
-                    {guest.rsvpStatus === "no" && <span className={styles.badgeNo}>No</span>}
-                    {guest.rsvpStatus === "pending" &&
-                      (pastDeadline ? (
-                        <span className={styles.badgeOverdue}>Pendiente · vencido</span>
-                      ) : (
-                        <span className={styles.badgePending}>Pendiente</span>
-                      ))}
                   </td>
                   <td>
                     {guest.rsvpStatus === "yes" ? (
@@ -616,11 +766,6 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                     >
                       {pending?.id === guest.id && pending.action === "whatsapp" ? "Enviando…" : "Enviar WhatsApp"}
                     </button>
-                    {guest.rsvpStatus === "pending" && (
-                      <button type="button" className={styles.actionLink} onClick={() => handleSendReminder(guest)}>
-                        Enviar recordatorio
-                      </button>
-                    )}
                     {isReminderEmailEligible(guest) && (
                       <button
                         type="button"
@@ -633,38 +778,18 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                           : "Enviar recordatorio por correo"}
                       </button>
                     )}
-                    {guest.rsvpStatus === "yes" && (
-                      <>
-                        <button
-                          type="button"
-                          className={styles.actionLink}
-                          disabled={pending?.id === guest.id}
-                          onClick={() => handleResendConfirmation(guest)}
-                        >
-                          Reenviar comprobante
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.actionButton}
-                          disabled={pending?.id === guest.id}
-                          onClick={() => handleToggleGuestCheckedIn(guest)}
-                        >
-                          {pending?.id === guest.id && pending.action === "checkin"
-                            ? "Guardando…"
-                            : guest.checkedIn
-                              ? "Deshacer check-in"
-                              : "Marcar llegada"}
-                        </button>
-                      </>
+                    {isClosureNoticeEligible(guest) && (
+                      <button
+                        type="button"
+                        className={styles.actionLink}
+                        disabled={pending?.id === guest.id}
+                        onClick={() => handleSendClosureNoticeEmail(guest)}
+                      >
+                        {pending?.id === guest.id && pending.action === "closureNoticeEmail"
+                          ? "Enviando…"
+                          : "Enviar aviso de cierre"}
+                      </button>
                     )}
-                    <button
-                      type="button"
-                      className={styles.actionButton}
-                      disabled={pending?.id === guest.id}
-                      onClick={() => handleRegenerateLink(guest)}
-                    >
-                      {pending?.id === guest.id && pending.action === "regenerate" ? "Regenerando…" : "Regenerar link"}
-                    </button>
                     <button
                       type="button"
                       className={styles.actionButtonDanger}
@@ -673,12 +798,13 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                     >
                       {pending?.id === guest.id && pending.action === "delete" ? "Eliminando…" : "Eliminar"}
                     </button>
+                    <RowActionsMenu items={buildRowActions(guest)} />
                   </td>
                 </tr>
 
-                {guest.companions.length > 0 && (
+                {companionsExpanded && (
                   <tr className={styles.companionSubRow}>
-                    <td colSpan={11}>
+                    <td colSpan={6}>
                       <table className={styles.subTable}>
                         <thead>
                           <tr>
@@ -776,7 +902,8 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
                   </tr>
                 )}
               </Fragment>
-                    ))
+                      );
+                    })
                   )}
                 </Fragment>
                 );
@@ -800,6 +927,14 @@ export function GuestTable({ guests }: { guests: GuestRowView[] }) {
           guests={emailReminderQueue.guests}
           excludedCount={emailReminderQueue.excludedCount}
           onClose={() => setEmailReminderQueue(null)}
+        />
+      )}
+
+      {closureNoticeQueue && (
+        <BulkClosureNoticeQueue
+          guests={closureNoticeQueue.guests}
+          excludedCount={closureNoticeQueue.excludedCount}
+          onClose={() => setClosureNoticeQueue(null)}
         />
       )}
     </div>

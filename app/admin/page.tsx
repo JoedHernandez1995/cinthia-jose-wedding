@@ -15,6 +15,13 @@ export default async function AdminDashboardPage() {
     no: guests.filter((g) => g.rsvpStatus === "no").length,
     pending: guests.filter((g) => g.rsvpStatus === "pending").length,
     attending: guests.reduce((sum, g) => sum + (g.rsvpStatus === "yes" ? (g.rsvpAttendingCount ?? 0) : 0), 0),
+    // A "no" RSVP always means the entire invited party declined — the "some companions still
+    // attend" case is represented as status "yes" with primaryAttending: false instead — so
+    // partySizeAllowed is the exact declined headcount, not an estimate.
+    declinedPeople: guests.reduce((sum, g) => sum + (g.rsvpStatus === "no" ? g.partySizeAllowed : 0), 0),
+    // Pending guests haven't said how many of their allowed party will actually come, so this is an
+    // upper bound (their full partySizeAllowed), not a confirmed headcount.
+    pendingPeopleMax: guests.reduce((sum, g) => sum + (g.rsvpStatus === "pending" ? g.partySizeAllowed : 0), 0),
     // Invited capacity — every named guest's `partySizeAllowed` already counts them plus their
     // allowed plus-ones, regardless of whether they've responded yet.
     invitedPersonsTotal: guests.reduce((sum, g) => sum + g.partySizeAllowed, 0),
@@ -54,11 +61,18 @@ export default async function AdminDashboardPage() {
 
   // The numbers an admin needs on every visit: overall progress, the three outcomes, and how much
   // time is left. Shown bigger/first — everything else is context, not a daily decision driver.
+  // Confirmados/No asistirán/Pendientes lead with PEOPLE counts (what a planner needs for catering/
+  // seating), not invitation-row counts — the row count is shown as a smaller sub-line instead, so
+  // this never disagrees with the "Total de asistentes confirmados"-style number elsewhere.
   const primaryCards = [
     { label: "Respondieron", value: `${responseRate}%` },
-    { label: "Confirmados", value: stats.yes },
-    { label: "No asistirán", value: stats.no },
-    { label: "Pendientes", value: stats.pending },
+    { label: "Confirmados", value: stats.attending, sub: `${stats.yes} invitación${stats.yes === 1 ? "" : "es"}` },
+    { label: "No asistirán", value: stats.declinedPeople, sub: `${stats.no} invitación${stats.no === 1 ? "" : "es"}` },
+    {
+      label: "Pendientes (máx.)",
+      value: stats.pendingPeopleMax,
+      sub: `${stats.pending} invitación${stats.pending === 1 ? "" : "es"}`,
+    },
     {
       label: wedding.rsvpDeadlineLabel,
       value: pastDeadline ? "Plazo vencido" : `${daysToDeadline} día${daysToDeadline === 1 ? "" : "s"}`,
@@ -82,7 +96,6 @@ export default async function AdminDashboardPage() {
     { label: "Invitados del extranjero", value: stats.extranjero },
     { label: "Invitaciones enviadas", value: `${stats.invitesSent} / ${stats.total}` },
     { label: "Han visto la invitación", value: `${stats.viewed} / ${stats.total}` },
-    { label: "Total de asistentes confirmados", value: stats.attending },
     { label: "Acompañantes utilizados", value: `${stats.companionSlotsUsed} / ${stats.companionSlotsAllowed}` },
     { label: "Han llegado (check-in)", value: `${checkedInCount} / ${stats.attending}` },
   ];
@@ -96,6 +109,7 @@ export default async function AdminDashboardPage() {
           <div key={card.label} className={`${styles.primaryCard} ${card.warning ? styles.primaryCardWarning : ""}`}>
             <div className={styles.primaryCardValue}>{card.value}</div>
             <div className={styles.primaryCardLabel}>{card.label}</div>
+            {"sub" in card && card.sub && <div className={styles.primaryCardSub}>{card.sub}</div>}
           </div>
         ))}
       </div>

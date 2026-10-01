@@ -61,6 +61,13 @@ create index if not exists guests_checkin_code_idx on guests (checkin_code);
 alter table guests add column if not exists reminder_sent_at timestamptz;
 alter table guests add column if not exists reminder_send_error text;
 
+-- "The RSVP window closed" notice — a one-time manual email (single or bulk from /admin/guests)
+-- to guests who viewed the invitation, have an email on file, and never responded before the
+-- deadline. Distinct from reminder_sent_at above: reminders nudge toward RSVPing before the
+-- deadline, this tells them the window is shut and points them to the wedding planner instead.
+alter table guests add column if not exists closure_notice_sent_at timestamptz;
+alter table guests add column if not exists closure_notice_send_error text;
+
 
 -- Optional family/group name shown on the invitation instead of the
 -- individual guest's name (e.g. "Familia Martínez" for Raúl Martínez + 3
