@@ -30,16 +30,17 @@ export async function sendGuestReminder(guest: Guest): Promise<boolean> {
 
 /**
  * The automated reminder campaign's cadence, in days between sends, ramping up as the RSVP
- * deadline (`wedding.rsvpDeadlineIso`, 2026-10-01) approaches: every 7 days in August, every 3
- * days in September, daily in the final week (Sep 24–30). All boundaries are Honduras local time
- * (-06:00, no DST), matching every other hardcoded wedding date in `config/site.ts`. Outside this
- * window — before the campaign starts, or once the deadline hits and self-serve RSVP editing is
- * replaced by the "contact the planner" flow — no automated reminder goes out.
+ * deadline (`wedding.rsvpDeadlineIso`, 2026-09-30) approaches: every 7 days in August, every 3
+ * days in September, daily in the final week (Sep 23–29). CAMPAIGN_END intentionally sits a day
+ * before the actual deadline (23:59:59 on the 30th) — no automated reminder goes out on the
+ * deadline day itself; a guest who's still pending by then is handled by the closure-notice flow
+ * instead (see lib/closureNotice.ts) once the window actually closes. All boundaries are Honduras
+ * local time (-06:00, no DST), matching every other hardcoded wedding date in `config/site.ts`.
  */
 const CAMPAIGN_START = new Date("2026-08-01T00:00:00-06:00");
 const SEPTEMBER_START = new Date("2026-09-01T00:00:00-06:00");
-const FINAL_WEEK_START = new Date("2026-09-24T00:00:00-06:00");
-const CAMPAIGN_END = new Date("2026-10-01T00:00:00-06:00");
+const FINAL_WEEK_START = new Date("2026-09-23T00:00:00-06:00");
+const CAMPAIGN_END = new Date("2026-09-30T00:00:00-06:00");
 
 /** Returns the reminder cadence (in days) in effect for `now`, or `null` if outside the campaign window. */
 export function getReminderIntervalDays(now: Date): number | null {

@@ -26,9 +26,9 @@ export const wedding = {
   heroDateLabel: "07 NOVIEMBRE 2026",
   dateLabel: "SÁBADO, 7 NOVIEMBRE DE 2026",
   timeLabel: "A PARTIR DE LAS 4:00 P.M.",
-  rsvpDeadlineLabel: "1 de octubre, 2026",
+  rsvpDeadlineLabel: "30 de septiembre, 2026",
   // Same instant as `rsvpDeadlineLabel` above, used to flag (not block) late RSVPs.
-  rsvpDeadlineIso: "2026-10-01T23:59:59-06:00",
+  rsvpDeadlineIso: "2026-09-30T23:59:59-06:00",
   venueName: "Hacienda El Trapiche",
   venueCity: "Tegucigalpa, Honduras",
   venueAddress: "Boulevard Suyapa, Tegucigalpa",
